@@ -143,3 +143,11 @@ def test_version(package_sample_source):
 
 def test_license_file(package_license_file):
     assert trampolim._build.Project().license_file == 'some-license-file'
+
+
+def test_license_text_inline(package_license_text):
+    assert trampolim._build.Project().license == 'inline license!'
+
+
+def test_license_text_from_file(package_license_file):
+    assert trampolim._build.Project().license == 'blah\n'
