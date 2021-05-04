@@ -73,7 +73,7 @@ class Project():
 
     def _validate(self) -> None:
         '''Validate the project table.'''
-        for field in ('name', 'license'):
+        for field in ('name', 'version', 'license'):
             if field not in self._project:
                 raise ConfigurationError(f'Field `project.{field}` missing pyproject.toml')
 
