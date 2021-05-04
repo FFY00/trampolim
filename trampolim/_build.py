@@ -197,8 +197,11 @@ class SdistBuilder():
         if self._project.license_file:
             tar.add(str(self._project.license_file))
         else:
-            with io.BytesIO(self._project.license.encode()) as data:
-                tar.addfile(tarfile.TarInfo('LICENSE'), data)
+            license_raw = self._project.license.encode()
+            info = tarfile.TarInfo('LICENSE')
+            info.size = len(license_raw)
+            with io.BytesIO(license_raw) as data:
+                tar.addfile(info, data)
 
         # cleanup
         tar.close()
