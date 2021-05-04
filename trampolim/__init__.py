@@ -42,7 +42,7 @@ def build_sdist(
     builder = trampolim._build.SdistBuilder(project)
 
     builder.build(sdist_directory)
-    return builder.name
+    return builder.file
 
 
 def build_wheel(

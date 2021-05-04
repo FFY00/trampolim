@@ -222,7 +222,7 @@ class SdistBuilder():
         self._project = project
 
     @property
-    def name(self) -> str:
+    def file(self) -> str:
         return f'{self._project.name}-{self._project.version}.tar.gz'
 
     def build(self, path: Path) -> None:
@@ -234,7 +234,7 @@ class SdistBuilder():
         file = typing.cast(
             IO[bytes],
             gzip.GzipFile(
-                os.path.join(path, self.name),
+                os.path.join(path, self.file),
                 mode='wb',
                 mtime=mtime,
             ),
