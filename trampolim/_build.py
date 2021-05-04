@@ -178,7 +178,7 @@ class Project():
             return subprocess.check_output([
                 'git', 'describe', '--tags'
             ]).decode().strip(' v').replace('-', '.')
-        except FileNotFoundError:
+        except (FileNotFoundError, subprocess.CalledProcessError):
             pass
 
         raise TrampolimError(
