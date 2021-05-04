@@ -220,7 +220,7 @@ class SdistBuilder():
 
     @property
     def name(self) -> str:
-        return f'{self._project.name}.tar.gz'
+        return f'{self._project.name}-{self._project.version}.tar.gz'
 
     def build(self, path: Path) -> None:
         # reproducibility
