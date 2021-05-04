@@ -110,17 +110,16 @@ class Project():
     def root_modules(self) -> Sequence[str]:
         '''Project top-level modules.
 
-        By default will look for files in the root folder for modules containing
-        a __init__.py, or .py files that do not start with the `.` characther or
-        contain the `-` character.
+        By default will look for the normalized name of the project name
+        replacing `-` with `_`.
         '''
-        return list(map(
-            lambda x: os.path.dirname(x),
-            glob.glob(os.path.join('*', '__init__.py')),
-        )) + [
-            file for file in os.listdir()
-            if file.endswith('.py') and not file.startswith('.') and '-' not in file
-        ]
+        name = self.name.replace('-', '_')
+        files = os.listdir()
+        if f'{name}.py' in files:  # file module
+            return [f'{name}.py']
+        if name in files:  # dir module
+            return [name]
+        raise TrampolimError(f'Could not find the top-level module(s) (looking for `{name}`)')
 
     @functools.cached_property
     def name(self) -> str:
