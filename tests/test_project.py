@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: MIT
 
+import re
 import textwrap
 
 import pytest
@@ -80,3 +81,23 @@ import trampolim._build
 def test_validate(package_sample_source, data, error):
     with pytest.raises(trampolim.ConfigurationError, match=error):
         trampolim._build.Project(_toml=data)
+
+
+def test_no_module(package_no_module):
+    with pytest.raises(
+        trampolim.TrampolimError,
+        match=re.escape('Could not find the top-level module(s) (looking for `no_module`)'),
+    ):
+        trampolim._build.Project()
+
+
+def test_root_modules_dir(package_sample_source):
+    project = trampolim._build.Project()
+
+    assert project.root_modules == ['sample_source']
+
+
+def test_root_modules_file(package_file_module):
+    project = trampolim._build.Project()
+
+    assert project.root_modules == ['file_module.py']
