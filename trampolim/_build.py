@@ -190,8 +190,8 @@ class SdistBuilder():
         tar.add('pyproject.toml')
 
         # add source
-        for path in self._project.source:
-            tar.add(path)
+        for source_path in self._project.source:
+            tar.add(source_path)
 
         # add license
         if self._project.license_file:
