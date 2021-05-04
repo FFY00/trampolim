@@ -1,0 +1,43 @@
+[build-system]
+build-backend = 'trampolim'
+backend-path = ['.']
+requires = []
+
+[project]
+name = 'trampolim'
+version = '0.0.0'
+description = 'A modern Python build backend'
+readme = 'README.md'
+requires-python = '>=3.7'
+license = { file = 'LICENSE' }
+keywords = ['build', 'pep517', 'package', 'packaging']
+authors = [
+  { name = 'Filipe Laíns', email = 'lains@riseup.net' },
+]
+maintainers = [
+  { name = 'Filipe Laíns', email = 'lains@riseup.net' },
+]
+classifiers = [
+  'Development Status :: 4 - Beta',
+  'Programming Language :: Python'
+]
+
+dependencies = [
+  'toml',
+  'rich',
+]
+
+[project.optional-dependencies]
+test = [
+  'pytest',
+  'pytest-cov',
+]
+
+[project.scripts]
+trampolim = 'trampolim.__main__:entrypoint'
+
+[project.urls]
+homepage = 'github.com/FFY00/trampolim'
+documentation = 'github.com/FFY00/trampolim'
+repository = 'github.com'
+changelog = 'github.com/FFY00/trampolim/spam/blob/master/CHANGELOG.rst'
