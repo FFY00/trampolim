@@ -5,4 +5,4 @@ requires = ['trampolim']
 [project]
 name = 'license-file'
 version = '0.0.0'
-license = { file = 'LICENSE' }
+license = { file = 'some-license-file' }

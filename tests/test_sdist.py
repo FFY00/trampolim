@@ -15,11 +15,11 @@ def test_pyproject(package_license_file, sdist_license_file):
 def test_license_file(package_license_file, sdist_license_file):
     t = tarfile.open(sdist_license_file, 'r')
 
-    assert 'LICENSE' in t.getnames()
+    assert 'some-license-file' in t.getnames()
 
-    data = t.extractfile('LICENSE')
+    data = t.extractfile('some-license-file')
 
-    with open(package_license_file / 'LICENSE', 'rb') as f:
+    with open(package_license_file / 'some-license-file', 'rb') as f:
         assert f.read() == data.read()
 
 
