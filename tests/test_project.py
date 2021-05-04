@@ -173,4 +173,4 @@ def test_vcs_no_version(mocker, package_no_version):
         'Could not find the project version from VCS (you can set the '
         'TRAMPOLIM_VCS_VERSION environment variable to manually override the version)'
     )):
-        trampolim._build.Project().version
+        trampolim._build.Project()

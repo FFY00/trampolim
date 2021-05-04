@@ -54,6 +54,8 @@ class Project():
 
         self._validate()
 
+        self.version  # calculate version
+
         # warn users about test/tests modules -- they probably don't want them installed!
         for module in ('test', 'tests'):
             if module in self.root_modules:
