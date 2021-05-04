@@ -40,5 +40,5 @@ trampolim = 'trampolim.__main__:entrypoint'
 [project.urls]
 homepage = 'github.com/FFY00/trampolim'
 documentation = 'github.com/FFY00/trampolim'
-repository = 'github.com'
-changelog = 'github.com/FFY00/trampolim/spam/blob/master/CHANGELOG.rst'
+repository = 'github.com/FFY00/trampolim'
+changelog = 'github.com/FFY00/trampolim/blob/master/CHANGELOG.rst'
