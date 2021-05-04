@@ -105,3 +105,33 @@ def test_root_modules_file(package_file_module):
     project = trampolim._build.Project()
 
     assert project.root_modules == ['file_module.py']
+
+
+@pytest.mark.parametrize(
+    ('original', 'normalized'),
+    [
+        ('simple', 'simple'),
+        ('a-b', 'a-b'),
+        ('a_b', 'a-b'),
+        ('a.b', 'a-b'),
+        ('a---b', 'a-b'),
+        ('a___b', 'a-b'),
+        ('a...b', 'a-b'),
+        ('a-_.b', 'a-b'),
+        ('a-b_c', 'a-b-c'),
+        ('a_b_c', 'a-b-c'),
+        ('a.b_c', 'a-b-c'),
+    ]
+)
+def test_name_normalization(package_sample_source, original, normalized):
+    class DummyModules(trampolim._build.Project):
+        @property
+        def root_modules(self):
+            return ['dummy']  # remove module dicovery
+
+    assert DummyModules(_toml='''
+        [project]
+        name = '%NAME%'
+        version = '1.0.0'
+        license = { text = '...' }
+    '''.replace('%NAME%', original)).name == normalized
