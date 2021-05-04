@@ -52,5 +52,5 @@ sample_entrypoint = 'sample_project:entrypoint_function'
 homepage = 'my-sample-project-website.example.com'
 documentation = 'github.com/some-user/sample-project'
 repository = 'github.com/some-user/sample-project'
-changelog = 'github.com/some-user/sample-preoject/blob/master/CHANGELOG.rst'
+changelog = 'github.com/some-user/sample-project/blob/master/CHANGELOG.rst'
 ```
