@@ -139,3 +139,7 @@ def test_name_normalization(package_sample_source, original, normalized):
 
 def test_version(package_sample_source):
     assert trampolim._build.Project().version == '0.0.0'
+
+
+def test_license_file(package_license_file):
+    assert trampolim._build.Project().license_file == 'some-license-file'
