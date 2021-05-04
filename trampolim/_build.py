@@ -9,6 +9,7 @@ import os
 import os.path
 import tarfile
 import typing
+import warnings
 
 from typing import IO, Any, List, Optional, Sequence, Type, Union
 
@@ -26,6 +27,10 @@ class ConfigurationError(TrampolimError):
     '''Error in the backend configuration.'''
 
 
+class TrampolimWarning(Warning):
+    '''Backend warning.'''
+
+
 class Project():
     def __init__(self) -> None:
         with open('pyproject.toml') as f:
@@ -37,6 +42,14 @@ class Project():
         self._project = self._pyproject['project']
 
         self._validate()
+
+        # warn users about test/tests modules -- they probably don't want them installed!
+        for module in ('test', 'tests'):
+            if module in self.root_modules:
+                warnings.warn(
+                    f'Top-level module `{module}` selected, are you sure you want to install it??',
+                    TrampolimWarning,
+                )
 
     def _validate_type(self, key: str, type: Type[Any]) -> None:
         '''Validate a key type in the project table.
