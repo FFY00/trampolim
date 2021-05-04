@@ -38,9 +38,12 @@ class TrampolimWarning(Warning):
 
 
 class Project():
-    def __init__(self) -> None:
-        with open('pyproject.toml') as f:
-            self._pyproject = toml.load(f)
+    def __init__(self, _toml: Optional[str] = None) -> None:
+        if _toml is not None:
+            self._pyproject = toml.loads(_toml)
+        else:
+            with open('pyproject.toml') as f:
+                self._pyproject = toml.load(f)
 
         if 'project' not in self._pyproject:
             raise ConfigurationError('Missing section `project` in pyproject.toml')
