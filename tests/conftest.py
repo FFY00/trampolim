@@ -42,7 +42,10 @@ def tmp_dir_session():
     try:
         yield pathlib.Path(path)
     finally:
-        shutil.rmtree(path)
+        try:
+            shutil.rmtree(path)
+        except PermissionError:
+            pass  # this sometimes fails on windows :/
 
 
 def generate_package_fixture(package):
