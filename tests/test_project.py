@@ -37,6 +37,17 @@ import trampolim._build
             textwrap.dedent('''
                 [project]
                 name = 'test'
+                license = { file = '...', text = '...' }
+            '''),
+            re.escape(
+                'Invalid `project.license` value in pyproject.toml, '
+                'expecting either `file` or `text` (got `{\'file\': \'...\', \'text\': \'...\'}`)'
+            ),
+        ),
+        (
+            textwrap.dedent('''
+                [project]
+                name = 'test'
                 license = { made-up = ':(' }
             '''),
             re.escape(

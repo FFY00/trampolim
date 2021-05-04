@@ -92,7 +92,10 @@ class Project():
             self._validate_type('version', str)
 
         # license
-        if 'file' not in self._project['license'] and 'text' not in self._project['license']:
+        if (
+            ('file' not in self._project['license'] and 'text' not in self._project['license']) or
+            ('file' in self._project['license'] and 'text' in self._project['license'])
+        ):
             raise ConfigurationError(
                 'Invalid `project.license` value in pyproject.toml, '
                 f'expecting either `file` or `text` (got `{self._project["license"]}`)'
