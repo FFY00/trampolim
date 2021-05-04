@@ -46,7 +46,7 @@ def tmp_dir_session():
     finally:
         try:
             shutil.rmtree(path)
-        except PermissionError:
+        except PermissionError:  # pragma: no cover
             pass  # this sometimes fails on windows :/
 
 
