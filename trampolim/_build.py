@@ -2,11 +2,15 @@
 
 import functools
 import glob
+import gzip
+import io
 import itertools
 import os
 import os.path
+import tarfile
+import typing
 
-from typing import Any, List, Optional, Sequence, Type, Union
+from typing import IO, Any, List, Optional, Sequence, Type, Union
 
 import toml
 
@@ -125,3 +129,58 @@ class Project():
             text = self._project['license']['text']
             assert isinstance(text, str)
             return text
+
+
+class SdistBuilder():
+    '''Simple sdist builder.
+
+    Will only include by default the files relevant for source code distribution
+    and the required files to be able to build binary distributions.
+    '''
+    def __init__(self, project: Project) -> None:
+        self._project = project
+
+    @property
+    def name(self) -> str:
+        return f'{self._project.name}'
+
+    def build(self, path: Path) -> None:
+        # reproducibility
+        source_date_epoch = os.environ.get('SOURCE_DATE_EPOCH')
+        mtime = int(source_date_epoch) if source_date_epoch else None
+
+        # open files
+        file = typing.cast(
+            IO[bytes],
+            gzip.GzipFile(
+                os.path.join(path, f'{self.name}.tar.gz'),
+                mode='wb',
+                mtime=mtime,
+            ),
+        )
+        tar = tarfile.TarFile(
+            str(path),
+            mode='w',
+            fileobj=file,
+            format=tarfile.PAX_FORMAT,  # changed in 3.8 to GNU
+        )
+
+        # add pyproject.toml
+        tar.add('pyproject.toml')
+
+        # add source
+        for path in self._project.source:
+            tar.add(path)
+
+        # add license
+        if self._project.license_file:
+            tar.add(str(self._project.license_file))
+        else:
+            tar.addfile(
+                tarfile.TarInfo('LICENSE'),
+                io.BytesIO(self._project.license.encode()),
+            )
+
+        # cleanup
+        tar.close()
+        file.close()
