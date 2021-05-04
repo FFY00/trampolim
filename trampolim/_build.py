@@ -4,7 +4,6 @@ import functools
 import glob
 import gzip
 import io
-import itertools
 import os
 import os.path
 import tarfile
@@ -94,25 +93,33 @@ class Project():
     @property
     def source(self) -> List[str]:
         '''Project source.'''
-        return [
-            path for path in itertools.chain(*[
-                glob.glob(os.path.join(module, '**'), recursive=True)
-                for module in self.root_modules
-            ])
-            if os.path.isfile(path) and not path.endswith('.pyc')
-        ]
+        source = []
+
+        for module in self.root_modules:
+            if module.endswith('.py'):  # file
+                source.append(module)
+            else:  # dir
+                source += [
+                    path for path in glob.glob(os.path.join(module, '**'), recursive=True)
+                    if os.path.isfile(path) and not path.endswith('.pyc')
+                ]
+        return source
 
     @property
     def root_modules(self) -> Sequence[str]:
         '''Project top-level modules.
 
         By default will look for files in the root folder for modules containing
-        a __init__.py.
+        a __init__.py, or .py files that do not start with the `.` characther or
+        contain the `-` character.
         '''
         return list(map(
             lambda x: os.path.dirname(x),
             glob.glob(os.path.join('*', '__init__.py')),
-        ))
+        )) + [
+            file for file in os.listdir()
+            if file.endswith('.py') and not file.startswith('.') and '-' not in file
+        ]
 
     @functools.cached_property
     def name(self) -> str:
