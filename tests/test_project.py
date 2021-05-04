@@ -135,3 +135,7 @@ def test_name_normalization(package_sample_source, original, normalized):
         version = '1.0.0'
         license = { text = '...' }
     '''.replace('%NAME%', original)).name == normalized
+
+
+def test_version(package_sample_source):
+    assert trampolim._build.Project().version == '0.0.0'
