@@ -24,12 +24,11 @@ def get_requires_for_build_wheel(
 
 # prepare_metadata
 
-
-def prepare_metadata_for_build_wheel(
-    metadata_directory: trampolim._build.Path,
-    config_settings: Optional[Dict[str, Any]] = None,
-) -> str:
-    raise NotImplementedError
+# def prepare_metadata_for_build_wheel(
+#     metadata_directory: trampolim._build.Path,
+#     config_settings: Optional[Dict[str, Any]] = None,
+# ) -> str:
+#     raise NotImplementedError
 
 
 # build
