@@ -36,8 +36,10 @@ import trampolim._build
                 version = '1.0.0'
                 license = {}
             '''),
-            'Invalid `project.license` value in pyproject.toml, '
-            r'expecting either `file` or `text` \(got `{}`\)',
+            re.escape(
+                'Invalid `project.license` value in pyproject.toml, '
+                'expecting either `file` or `text` (got `{}`)'
+            ),
         ),
         (
             textwrap.dedent('''
@@ -46,8 +48,10 @@ import trampolim._build
                 version = '1.0.0'
                 license = { made-up = ':(' }
             '''),
-            'Invalid `project.license` value in pyproject.toml, '
-            r'expecting either `file` or `text` \(got `{\'made-up\': \':\(\'}`\)',
+            re.escape(
+                'Invalid `project.license` value in pyproject.toml, '
+                "expecting either `file` or `text` (got `{'made-up': ':('}`)"
+            ),
         ),
         (
             textwrap.dedent('''
@@ -56,7 +60,7 @@ import trampolim._build
                 version = '1.0.0'
                 license = { file = true }
             '''),
-            r'Field `project.license.file` has an invalid type, expecting string \(got `True`\)',
+            re.escape('Field `project.license.file` has an invalid type, expecting string (got `True`)'),
         ),
         (
             textwrap.dedent('''
@@ -65,7 +69,7 @@ import trampolim._build
                 version = '1.0.0'
                 license = { text = true }
             '''),
-            r'Field `project.license.text` has an invalid type, expecting string \(got `True`\)',
+            re.escape('Field `project.license.text` has an invalid type, expecting string (got `True`)'),
         ),
         (
             textwrap.dedent('''
@@ -74,7 +78,7 @@ import trampolim._build
                 version = '1.0.0'
                 license = { file = 'this-file-does-not-exist' }
             '''),
-            r'License file not found \(`this-file-does-not-exist`\)',
+            re.escape('License file not found (`this-file-does-not-exist`)'),
         ),
     ]
 )
