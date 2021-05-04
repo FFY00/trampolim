@@ -1,0 +1,7 @@
+[build-system]
+build-backend = 'trampolim'
+requires = ['trampolim']
+
+[project]
+name = 'vcs-version-unpopulated'
+license = { text = '...' }

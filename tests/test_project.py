@@ -159,6 +159,15 @@ def test_vcs_version_git_archive_commit(package_vcs_version3):
     assert trampolim._build.Project().version == 'this-is-a-commit'
 
 
+def test_vcs_version_git_archive_unpopulated(mocker, package_vcs_version_unpopulated):
+    mocker.patch('subprocess.check_output', side_effect=FileNotFoundError)
+    with pytest.raises(trampolim.TrampolimError, match=re.escape(
+        'Could not find the project version from VCS (you can set the '
+        'TRAMPOLIM_VCS_VERSION environment variable to manually override the version)'
+    )):
+        trampolim._build.Project()
+
+
 def test_vcs_git_repo(mocker, package_no_version):
     mocker.patch(
         'subprocess.check_output',

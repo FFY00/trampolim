@@ -166,10 +166,10 @@ class Project():
                         name, value = ref.split(': ', maxsplit=1)
                     except ValueError:
                         continue
-                    if name == 'tag':
+                    if name == 'tag' and '$' not in value:
                         assert isinstance(value, str)
                         return value.strip(' v')
-            if 'commit' in data:
+            if 'commit' in data and '$' not in data['commit']:
                 assert isinstance(data['commit'], str)
                 return data['commit']
 
