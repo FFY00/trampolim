@@ -1,0 +1,2 @@
+ref-names: HEAD -> my_branch, some_upstream/some_branch, some_branch
+commit: this-is-a-commit

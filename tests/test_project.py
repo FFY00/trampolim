@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: MIT
 
+import os
 import re
 import textwrap
 
@@ -19,21 +20,12 @@ import trampolim._build
                 [project]
                 name = 'test'
             '''),
-            'Field `project.version` missing pyproject.toml',
-        ),
-        (
-            textwrap.dedent('''
-                [project]
-                name = 'test'
-                version = '1.0.0'
-            '''),
             'Field `project.license` missing pyproject.toml',
         ),
         (
             textwrap.dedent('''
                 [project]
                 name = 'test'
-                version = '1.0.0'
                 license = {}
             '''),
             re.escape(
@@ -45,7 +37,6 @@ import trampolim._build
             textwrap.dedent('''
                 [project]
                 name = 'test'
-                version = '1.0.0'
                 license = { made-up = ':(' }
             '''),
             re.escape(
@@ -57,7 +48,6 @@ import trampolim._build
             textwrap.dedent('''
                 [project]
                 name = 'test'
-                version = '1.0.0'
                 license = { file = true }
             '''),
             re.escape('Field `project.license.file` has an invalid type, expecting string (got `True`)'),
@@ -66,7 +56,6 @@ import trampolim._build
             textwrap.dedent('''
                 [project]
                 name = 'test'
-                version = '1.0.0'
                 license = { text = true }
             '''),
             re.escape('Field `project.license.text` has an invalid type, expecting string (got `True`)'),
@@ -75,7 +64,6 @@ import trampolim._build
             textwrap.dedent('''
                 [project]
                 name = 'test'
-                version = '1.0.0'
                 license = { file = 'this-file-does-not-exist' }
             '''),
             re.escape('License file not found (`this-file-does-not-exist`)'),
@@ -137,10 +125,6 @@ def test_name_normalization(package_sample_source, original, normalized):
     '''.replace('%NAME%', original)).name == normalized
 
 
-def test_version(package_sample_source):
-    assert trampolim._build.Project().version == '0.0.0'
-
-
 def test_license_file(package_license_file):
     assert trampolim._build.Project().license_file == 'some-license-file'
 
@@ -151,3 +135,42 @@ def test_license_text_inline(package_license_text):
 
 def test_license_text_from_file(package_license_file):
     assert trampolim._build.Project().license == 'blah\n'
+
+
+def test_version(package_sample_source):
+    assert trampolim._build.Project().version == '0.0.0'
+
+
+def test_vcs_version_envvar(package_vcs_version1):
+    os.environ['TRAMPOLIM_VCS_VERSION'] = '1.2.3'
+    assert trampolim._build.Project().version == '1.2.3'
+    os.environ.pop('TRAMPOLIM_VCS_VERSION')
+
+
+def test_vcs_version_git_archive_tag_alone(package_vcs_version1):
+    assert trampolim._build.Project().version == '0.0.1'
+
+
+def test_vcs_version_git_archive_many_refs_tag(package_vcs_version2):
+    assert trampolim._build.Project().version == '0.0.2'
+
+
+def test_vcs_version_git_archive_commit(package_vcs_version3):
+    assert trampolim._build.Project().version == 'this-is-a-commit'
+
+
+def test_vcs_git_repo(mocker, package_no_version):
+    mocker.patch(
+        'subprocess.check_output',
+        side_effect=[b'1.0.0-23-gea1f213'],
+    )
+    assert trampolim._build.Project().version == '1.0.0.23.gea1f213'
+
+
+def test_vcs_no_version(mocker, package_no_version):
+    mocker.patch('subprocess.check_output', side_effect=FileNotFoundError)
+    with pytest.raises(trampolim.TrampolimError, match=re.escape(
+        'Could not find the project version from VCS (you can set the '
+        'TRAMPOLIM_VCS_VERSION environment variable to manually override the version)'
+    )):
+        trampolim._build.Project().version

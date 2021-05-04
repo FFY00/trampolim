@@ -1,11 +1,13 @@
 # SPDX-License-Identifier: MIT
 
+import email
 import glob
 import gzip
 import io
 import os
 import os.path
 import re
+import subprocess
 import sys
 import tarfile
 import typing
@@ -76,7 +78,7 @@ class Project():
 
     def _validate(self) -> None:
         '''Validate the project table.'''
-        for field in ('name', 'version', 'license'):
+        for field in ('name', 'license'):
             if field not in self._project:
                 raise ConfigurationError(f'Field `project.{field}` missing pyproject.toml')
 
@@ -84,7 +86,8 @@ class Project():
         self._validate_type('name', str)
 
         # version
-        self._validate_type('version', str)
+        if 'version' in self._project:
+            self._validate_type('version', str)
 
         # license
         if 'file' not in self._project['license'] and 'text' not in self._project['license']:
@@ -138,12 +141,48 @@ class Project():
         return re.sub(r'[-_.]+', '-', name).lower()
 
     @cached_property
-    def version(self) -> str:
+    def version(self) -> str:  # noqa: C901
         '''Project version.'''
-        # TODO: Allow dynamic -- discover from git or archive
-        version = self._project['version']
-        assert isinstance(version, str)
-        return version
+
+        if 'version' in self._project:
+            version = self._project['version']
+            assert isinstance(version, str)
+            return version
+
+        if 'TRAMPOLIM_VCS_VERSION' in os.environ:
+            return os.environ['TRAMPOLIM_VCS_VERSION']
+
+        # from git archive
+        # http://git-scm.com/book/en/v2/Customizing-Git-Git-Attributes
+        # https://git-scm.com/docs/pretty-formats
+        if os.path.isfile('.git-archive.txt'):
+            with open('.git-archive.txt') as f:
+                data = email.message_from_file(f)
+            if 'ref-names' in data:
+                for ref in data['ref-names'].split(', '):
+                    try:
+                        name, value = ref.split(': ', maxsplit=1)
+                    except ValueError:
+                        continue
+                    if name == 'tag':
+                        assert isinstance(value, str)
+                        return value.strip(' v')
+            if 'commit' in data:
+                assert isinstance(data['commit'], str)
+                return data['commit']
+
+        # from git repo
+        try:
+            return subprocess.check_output([
+                'git', 'describe', '--tags'
+            ]).decode().strip(' v').replace('-', '.')
+        except FileNotFoundError:
+            pass
+
+        raise TrampolimError(
+            'Could not find the project version from VCS (you can set the '
+            'TRAMPOLIM_VCS_VERSION environment variable to manually override the version)'
+        )
 
     @cached_property
     def license_file(self) -> Optional[str]:
