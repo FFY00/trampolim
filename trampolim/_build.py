@@ -6,6 +6,7 @@ import gzip
 import io
 import os
 import os.path
+import re
 import tarfile
 import typing
 import warnings
@@ -126,7 +127,7 @@ class Project():
         '''Project name.'''
         name = self._project['name']
         assert isinstance(name, str)
-        return name
+        return re.sub(r'[-_.]+', '-', name).lower()
 
     @functools.cached_property
     def version(self) -> str:
