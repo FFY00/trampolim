@@ -3,6 +3,15 @@
 import tarfile
 
 
+def test_pyproject(package_license_file, sdist_license_file):
+    t = tarfile.open(sdist_license_file, 'r')
+
+    data = t.extractfile('pyproject.toml')
+
+    with open(package_license_file / 'pyproject.toml', 'rb') as f:
+        assert f.read() == data.read()
+
+
 def test_license_file(package_license_file, sdist_license_file):
     t = tarfile.open(sdist_license_file, 'r')
 
