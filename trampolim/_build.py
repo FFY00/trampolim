@@ -18,8 +18,12 @@ import toml
 Path = Union[str, os.PathLike]
 
 
-class BuildError(Exception):
-    '''Build backend error.'''
+class TrampolimError(Exception):
+    '''Backend error.'''
+
+
+class ConfigurationError(TrampolimError):
+    '''Error in the backend configuration.'''
 
 
 class Project():
@@ -28,7 +32,7 @@ class Project():
             self._pyproject = toml.load(f)
 
         if 'project' not in self._pyproject:
-            raise BuildError('Missing section `project` in pyproject.toml')
+            raise ConfigurationError('Missing section `project` in pyproject.toml')
 
         self._project = self._pyproject['project']
 
@@ -43,7 +47,7 @@ class Project():
         for part in key.split('.'):
             value = value[part]
         if not isinstance(value, type):
-            raise BuildError(
+            raise ConfigurationError(
                 f'Field `project.{key}` has an invalid type, '
                 f'expecting string (got `{type(value)}`)'
             )
@@ -52,7 +56,7 @@ class Project():
         '''Validate the project table.'''
         for field in ('name', 'license'):
             if field not in self._project:
-                raise BuildError(f'Field `project.{field}` missing pyproject.toml')
+                raise ConfigurationError(f'Field `project.{field}` missing pyproject.toml')
 
         # name
         self._validate_type('name', str)
@@ -62,7 +66,7 @@ class Project():
 
         # license
         if 'file' not in self._project['license'] and 'text' not in self._project['license']:
-            raise BuildError(
+            raise ConfigurationError(
                 'Invalid `project.license` value in pyproject.toml, '
                 f'expecting either `file` or `text` (got `{self._project["license"]}`)'
             )
@@ -72,7 +76,7 @@ class Project():
             except KeyError:
                 continue
         if self.license_file and not os.path.isfile(self.license_file):
-            raise BuildError(f'License file not found (`{self.license_file}`)')
+            raise ConfigurationError(f'License file not found (`{self.license_file}`)')
 
     @property
     def source(self) -> List[str]:
