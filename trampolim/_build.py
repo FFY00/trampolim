@@ -1,12 +1,12 @@
 # SPDX-License-Identifier: MIT
 
-import functools
 import glob
 import gzip
 import io
 import os
 import os.path
 import re
+import sys
 import tarfile
 import typing
 import warnings
@@ -14,6 +14,12 @@ import warnings
 from typing import IO, Any, List, Optional, Sequence, Type, Union
 
 import toml
+
+
+if sys.version_info < (3, 8):
+    from backports.cached_property import cached_property
+else:
+    from functools import cached_property
 
 
 Path = Union[str, os.PathLike]
@@ -121,14 +127,14 @@ class Project():
             return [name]
         raise TrampolimError(f'Could not find the top-level module(s) (looking for `{name}`)')
 
-    @functools.cached_property
+    @cached_property
     def name(self) -> str:
         '''Project name.'''
         name = self._project['name']
         assert isinstance(name, str)
         return re.sub(r'[-_.]+', '-', name).lower()
 
-    @functools.cached_property
+    @cached_property
     def version(self) -> str:
         '''Project version.'''
         # TODO: Allow dynamic -- discover from git or archive
@@ -136,7 +142,7 @@ class Project():
         assert isinstance(version, str)
         return version
 
-    @functools.cached_property
+    @cached_property
     def license_file(self) -> Optional[str]:
         '''Project license file (if any).'''
         try:
@@ -146,7 +152,7 @@ class Project():
         except KeyError:
             return None
 
-    @functools.cached_property
+    @cached_property
     def license(self) -> str:
         '''Project license text.'''
         assert self._project['license']
