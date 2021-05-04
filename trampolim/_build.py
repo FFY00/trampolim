@@ -91,7 +91,11 @@ class Project():
 
     @property
     def root_modules(self) -> Sequence[str]:
-        '''Project top-level modules.'''
+        '''Project top-level modules.
+
+        By default will look for files in the root folder for modules containing
+        a __init__.py.
+        '''
         return list(map(
             lambda x: os.path.dirname(x),
             glob.glob(os.path.join('*', '__init__.py')),
