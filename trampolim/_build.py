@@ -563,7 +563,6 @@ class Project():
         if self.readme_content_type:
             metadata['Description-Content-Type'] = self.readme_content_type
         metadata.body = self.readme_text
-        # print(str(metadata), end='')
         return metadata
 
 
