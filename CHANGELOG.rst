@@ -3,8 +3,8 @@ Changelog
 +++++++++
 
 
-Unreleased
-==========
+0.0.1 (06-05-2021)
+==================
 
 Initial release
 
