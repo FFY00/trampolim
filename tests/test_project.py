@@ -34,6 +34,16 @@ import trampolim._build
                 'automatically, `version` needs to be added to the `project.dynamic` list field)'
             ),
         ),
+        # version
+        (
+            textwrap.dedent('''
+                [project]
+                dynamic = [
+                    'name',
+                ]
+            '''),
+            re.escape('Unsupported field in `project.dynamic`: `project.name`'),
+        ),
         # license
         (
             textwrap.dedent('''

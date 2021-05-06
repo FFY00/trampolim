@@ -53,6 +53,9 @@ class Project():
             'text',
         ]
     }
+    _VALID_DYNAMIC = [
+        'version',
+    ]
 
     def __init__(self, _toml: Optional[str] = None) -> None:
         if _toml is not None:
@@ -68,6 +71,9 @@ class Project():
 
         dynamic = self._pget_list('dynamic')
         self._dynamic = dynamic if dynamic else []
+        for field in self._dynamic:
+            if field not in self._VALID_DYNAMIC:
+                raise ConfigurationError(f'Unsupported field in `project.dynamic`: `project.{field}`')
 
         self._validate()
 
