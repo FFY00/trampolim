@@ -398,6 +398,41 @@ def test_full_metadata(package_full_metadata):
     # TODO: requires-python, dependencies, optional-dependencies
 
 
+def test_rfc822_metadata(package_full_metadata):
+    assert str(trampolim._build.Project().metadata) == textwrap.dedent('''
+        Metadata-Version: 2.1
+        Name: full-metadata
+        Version: 3.2.1
+        Summary: A package with all the metadata :)
+        Keywords: trampolim is interesting
+        Home-page: example.com
+        Author: Unknown <example@example.com>, Example!
+        Author-Email: Unknown <example@example.com>, Example!
+        Maintainer: Other Example <other@example.com>
+        Maintainer-Email: Other Example <other@example.com>
+        Classifier: Development Status :: 4 - Beta
+        Classifier: Programming Language :: Python
+        Project-URL: Documentation, readthedocs.org
+        Project-URL: Repository, github.com/some/repo
+        Project-URL: Changelog, github.com/some/repo/blob/master/CHANGELOG.rst
+        Requires-Dist: dependency1
+        Requires-Dist: dependency2>1.0.0
+        Requires-Dist: dependency3[extra]
+        Requires-Dist: dependency4; os_name != "nt"
+        Requires-Dist: dependency5[other-extra]>1.0; os_name == "nt"
+
+        some readme
+    ''').lstrip()
+
+
+def test_rfc822_metadata_bytes(package_sample_source):
+    assert trampolim._build.Project().metadata.as_bytes() == textwrap.dedent('''
+        Metadata-Version: 2.1
+        Name: sample-source
+        Version: 0.0.0
+    ''').lstrip().encode()
+
+
 def test_readme_md(package_readme_md):
     assert trampolim._build.Project().readme_content_type == 'text/markdown'
 

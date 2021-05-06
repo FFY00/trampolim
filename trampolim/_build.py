@@ -1,5 +1,7 @@
 # SPDX-License-Identifier: MIT
 
+from __future__ import annotations
+
 import email
 import glob
 import gzip
@@ -450,6 +452,53 @@ class Project():
         except KeyError:
             return {}
 
+    def _person_list(self, people: List[Tuple[str, str]]) -> str:
+        return ', '.join([
+            '{}{}'.format(
+                name,
+                f' <{_email}>' if _email else ''
+            )
+            for name, _email in people
+        ])
+
+    @property
+    def metadata(self) -> RFC822Message:
+        '''dist-info METADATA.'''
+        metadata = RFC822Message()
+        metadata['Metadata-Version'] = '2.1'
+        metadata['Name'] = self.name
+        metadata['Version'] = self.version
+        # skip 'Platform' -- we currently only support pure
+        # skip 'Supported-Platform' -- we currently only support pure
+        metadata['Summary'] = self.description
+        # TODO: 'Description'
+        metadata['Keywords'] = ' '.join(self.keywords)
+        metadata['Home-page'] = self.homepage
+        # skip 'Download-URL'
+        metadata['Author'] = metadata['Author-Email'] = self._person_list(self.authors)
+        if self.maintainers != self.authors:
+            metadata['Maintainer'] = metadata['Maintainer-Email'] = self._person_list(self.maintainers)
+        # TODO: 'License'
+        for classifier in self.classifiers:
+            metadata['Classifier'] = classifier
+        # skip 'Provides-Dist'
+        # skip 'Obsoletes-Dist'
+        # TODO: 'Requires-Python'
+        # skip 'Requires-External'
+        if self.documentation:
+            metadata['Project-URL'] = f'Documentation, {self.documentation}'
+        if self.repository:
+            metadata['Project-URL'] = f'Repository, {self.repository}'
+        if self.changelog:
+            metadata['Project-URL'] = f'Changelog, {self.changelog}'
+        # TODO: 'Description-Content-Type'
+        # TODO: 'Provides-Extra'
+        for dep in self.dependencies:
+            metadata['Requires-Dist'] = dep  # XXX
+        metadata.body = self.readme_text
+        # print(str(metadata), end='')
+        return metadata
+
 
 class SdistBuilder():
     '''Simple sdist builder.
@@ -505,3 +554,28 @@ class SdistBuilder():
         # cleanup
         tar.close()
         file.close()
+
+
+class RFC822Message():
+    def __init__(self) -> None:
+        self._headers: Dict[str, List[str]] = {}
+        self.body: Optional[str] = None
+
+    def __setitem__(self, name: str, value: Optional[str]) -> None:
+        if not value:
+            return
+        if name not in self._headers:
+            self._headers[name] = []
+        self._headers[name].append(value)
+
+    def __str__(self) -> str:
+        text = ''
+        for name, entries in self._headers.items():
+            for entry in entries:
+                text += f'{name}: {entry}\n'
+        if self.body:
+            text += '\n' + self.body
+        return text
+
+    def as_bytes(self) -> bytes:
+        return str(self).encode()
