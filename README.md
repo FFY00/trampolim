@@ -34,7 +34,7 @@ authors = [
 ]
 classifiers = [
   'Development Status :: 4 - Beta',
-  'Programming Language :: Python'
+  'Programming Language :: Python',
 ]
 
 dependencies = [
