@@ -430,6 +430,7 @@ def test_rfc822_metadata(package_full_metadata):
         Requires-Dist: dependency3[extra]
         Requires-Dist: dependency4; os_name != "nt"
         Requires-Dist: dependency5[other-extra]>1.0; os_name == "nt"
+        Description-Content-Type: text/markdown
 
         some readme
     ''').lstrip()
