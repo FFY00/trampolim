@@ -173,6 +173,59 @@ import trampolim._build
             '''),
             re.escape('Field `project.dependencies` contains item with invalid type, expecting a string (got `99`)'),
         ),
+        # optional-dependencies
+        (
+            textwrap.dedent('''
+                [project]
+                name = 'test'
+                optional-dependencies = true
+            '''),
+            re.escape(
+                'Field `project.optional-dependencies` has an invalid type, '
+                'expecting a dictionary of PEP 508 requirement strings (got `True`)'
+            ),
+        ),
+        (
+            textwrap.dedent('''
+                [project]
+                name = 'test'
+                [project.optional-dependencies]
+                test = 'some string!'
+            '''),
+            re.escape(
+                'Field `project.optional-dependencies.test` has an invalid type, '
+                'expecting a dictionary PEP 508 requirement strings (got `some string!`)'
+            ),
+        ),
+        (
+            textwrap.dedent('''
+                [project]
+                name = 'test'
+                [project.optional-dependencies]
+                test = [
+                    true,
+                ]
+            '''),
+            re.escape(
+                'Field `project.optional-dependencies.test` has an invalid type, '
+                'expecting a PEP 508 requirement string (got `True`)'
+            ),
+        ),
+        (
+            textwrap.dedent('''
+                [project]
+                name = 'test'
+                [project.optional-dependencies]
+                test = [
+                    'definitely not a valid PEP 508 requirement!',
+                ]
+            '''),
+            re.escape(
+                'Field `project.optional-dependencies.test` contains an invalid '
+                'PEP 508 requirement string `definitely not a valid PEP 508 requirement!` '
+                '(`Parse error at "\'not a va\'": Expected stringEnd`)'
+            ),
+        ),
         # requires-python
         (
             textwrap.dedent('''
@@ -430,6 +483,10 @@ def test_rfc822_metadata(package_full_metadata):
         Requires-Dist: dependency3[extra]
         Requires-Dist: dependency4; os_name != "nt"
         Requires-Dist: dependency5[other-extra]>1.0; os_name == "nt"
+        Requires-Dist: test_dependency; extra == "test"
+        Requires-Dist: test_dependency[test_extra]; extra == "test"
+        Requires-Dist: test_dependency[test_extra2]>3.0; os_name == "nt" and extra == "test"
+        Provides-Extra: test
         Description-Content-Type: text/markdown
 
         some readme

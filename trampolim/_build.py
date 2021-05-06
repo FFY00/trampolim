@@ -15,6 +15,8 @@ import warnings
 
 from typing import IO, Dict, List, Optional, Sequence, Tuple, Union
 
+import packaging.markers
+import packaging.requirements
 import toml
 
 
@@ -113,6 +115,7 @@ class Project():
         self.name
         self.description
         self.dependencies
+        self.optional_dependencies
         self.requires_python
         self.keywords
         self.license_file
@@ -321,6 +324,40 @@ class Project():
         return self._pget_list('dependencies')
 
     @cached_property
+    def optional_dependencies(self) -> Dict[str, List[str]]:
+        '''Project optional dependencies.'''
+        try:
+            val = self._project['optional-dependencies']
+            if not isinstance(val, dict):
+                raise ConfigurationError(
+                    'Field `project.optional-dependencies` has an invalid type, expecting a '
+                    f'dictionary of PEP 508 requirement strings (got `{val}`)'
+                )
+            for extra, requirements in val.items():
+                assert isinstance(extra, str)
+                if not isinstance(requirements, list):
+                    raise ConfigurationError(
+                        f'Field `project.optional-dependencies.{extra}` has an invalid type, expecting a '
+                        f'dictionary PEP 508 requirement strings (got `{requirements}`)'
+                    )
+                for req in requirements:
+                    if not isinstance(req, str):
+                        raise ConfigurationError(
+                            f'Field `project.optional-dependencies.{extra}` has an invalid type, '
+                            f'expecting a PEP 508 requirement string (got `{req}`)'
+                        )
+                    try:
+                        packaging.requirements.Requirement(req)
+                    except packaging.requirements.InvalidRequirement as e:
+                        raise ConfigurationError(
+                            f'Field `project.optional-dependencies.{extra}` contains '
+                            f'an invalid PEP 508 requirement string `{req}` (`{str(e)}`)'
+                        )
+            return val
+        except KeyError:
+            return {}
+
+    @cached_property
     def requires_python(self) -> Optional[str]:
         '''Project Python requirements.'''
         return self._pget_str('requires-python')
@@ -466,7 +503,7 @@ class Project():
         ])
 
     @property
-    def metadata(self) -> 'RFC822Message':
+    def metadata(self) -> 'RFC822Message':  # noqa: C901
         '''dist-info METADATA.'''
         metadata = RFC822Message()
         metadata['Metadata-Version'] = '2.1'
@@ -494,11 +531,21 @@ class Project():
         if self.changelog:
             metadata['Project-URL'] = f'Changelog, {self.changelog}'
         # TODO: 'Description-Content-Type'
-        # TODO: 'Provides-Extra'
         if self.requires_python:
             metadata['Requires-Python'] = self.requires_python
         for dep in self.dependencies:
             metadata['Requires-Dist'] = dep
+        for extra, requirements in self.optional_dependencies.items():
+            metadata['Provides-Extra'] = extra
+            for req_string in requirements:
+                req = packaging.requirements.Requirement(req_string)
+                if req.marker:  # append our extra to the marker
+                    req.marker = packaging.markers.Marker(
+                        str(req.marker) + f' and extra == "{extra}"'
+                    )
+                else:  # add our extra marker
+                    req.marker = packaging.markers.Marker(f'extra == "{extra}"')
+                metadata['Requires-Dist'] = str(req)
         if self.readme_content_type:
             metadata['Description-Content-Type'] = self.readme_content_type
         metadata.body = self.readme_text

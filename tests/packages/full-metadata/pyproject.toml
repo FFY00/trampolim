@@ -29,7 +29,8 @@ dependencies = [
 [project.optional-dependencies]
 test = [
     'test_dependency',
-    'test_dependency[test_extra]'
+    'test_dependency[test_extra]',
+    'test_dependency[test_extra2] > 3.0; os_name == "nt"',
 ]
 
 [project.urls]
