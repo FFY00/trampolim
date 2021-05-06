@@ -475,7 +475,6 @@ class Project():
         # skip 'Platform' -- we currently only support pure
         # skip 'Supported-Platform' -- we currently only support pure
         metadata['Summary'] = self.description
-        # TODO: 'Description'
         metadata['Keywords'] = ' '.join(self.keywords)
         metadata['Home-page'] = self.homepage
         # skip 'Download-URL'
