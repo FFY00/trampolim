@@ -545,7 +545,6 @@ class Project():
             metadata['Project-URL'] = f'Repository, {self.repository}'
         if self.changelog:
             metadata['Project-URL'] = f'Changelog, {self.changelog}'
-        # TODO: 'Description-Content-Type'
         if self.requires_python:
             metadata['Requires-Python'] = self.requires_python
         for dep in self.dependencies:
