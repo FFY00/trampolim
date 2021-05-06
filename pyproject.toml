@@ -44,7 +44,7 @@ test = [
 ]
 
 [project.urls]
-homepage = 'github.com/FFY00/trampolim'
-documentation = 'github.com/FFY00/trampolim'
-repository = 'github.com/FFY00/trampolim'
-changelog = 'github.com/FFY00/trampolim/blob/master/CHANGELOG.rst'
+homepage = 'https://github.com/FFY00/trampolim'
+documentation = 'https://github.com/FFY00/trampolim'
+repository = 'https://github.com/FFY00/trampolim'
+changelog = 'https://github.com/FFY00/trampolim/blob/master/CHANGELOG.rst'
