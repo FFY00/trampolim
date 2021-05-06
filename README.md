@@ -32,9 +32,6 @@ license = { file = 'LICENSE' }
 authors = [
   { name = 'Filipe Laíns', email = 'lains@riseup.net' },
 ]
-maintainers = [
-  { name = 'Filipe Laíns', email = 'lains@riseup.net' },
-]
 classifiers = [
   'Development Status :: 4 - Beta',
   'Programming Language :: Python'
