@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: MIT
 
+import os.path
 import tarfile
 
 import trampolim._build
@@ -65,7 +66,10 @@ def test_source(package_sample_source, sdist_sample_source):
     ]
 
     for file in expected_source:
-        assert file in t.getnames()
+        with open(os.path.join(
+            *file[len('sample-source-0.0.0/'):].split('/')
+        ), 'rb') as f:
+            assert f.read() == t.extractfile(file).read()
 
 
 def test_pkginfo(package_license_text, sdist_license_text):
