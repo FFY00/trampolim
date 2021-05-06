@@ -21,11 +21,16 @@ classifiers = [
 
 dependencies = [
   'toml',
-  'rich',
   'backports.cached-property ; python_version < "3.8"',
 ]
 
 [project.optional-dependencies]
+cli = [
+  'rich',
+]
+pretty = [
+  'rich',
+]
 test = [
   'wheel',
   'pytest',
