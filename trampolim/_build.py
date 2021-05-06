@@ -1,7 +1,5 @@
 # SPDX-License-Identifier: MIT
 
-from __future__ import annotations
-
 import email
 import glob
 import gzip
@@ -462,7 +460,7 @@ class Project():
         ])
 
     @property
-    def metadata(self) -> RFC822Message:
+    def metadata(self) -> 'RFC822Message':
         '''dist-info METADATA.'''
         metadata = RFC822Message()
         metadata['Metadata-Version'] = '2.1'
