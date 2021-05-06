@@ -23,6 +23,17 @@ import trampolim._build
             '''),
             re.escape('Field `project.name` has an invalid type, expecting a string (got `True`)'),
         ),
+        # version
+        (
+            textwrap.dedent('''
+                [project]
+                name = 'test'
+            '''),
+            re.escape(
+                'Missing required field `project.version` (if you want to infer the project version '
+                'automatically, `version` needs to be added to the `project.dynamic` list field)'
+            ),
+        ),
         # license
         (
             textwrap.dedent('''

@@ -66,6 +66,9 @@ class Project():
 
         self._project = self._pyproject['project']
 
+        dynamic = self._pget_list('dynamic')
+        self._dynamic = dynamic if dynamic else []
+
         self._validate()
 
         self.version  # calculate version
@@ -179,6 +182,12 @@ class Project():
             version = self._project['version']
             assert isinstance(version, str)
             return version
+
+        if 'version' not in self._dynamic:
+            raise ConfigurationError(
+                'Missing required field `project.version` (if you want to infer the project version '
+                'automatically, `version` needs to be added to the `project.dynamic` list field)'
+            )
 
         if 'TRAMPOLIM_VCS_VERSION' in os.environ:
             return os.environ['TRAMPOLIM_VCS_VERSION']

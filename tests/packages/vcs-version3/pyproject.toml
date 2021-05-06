@@ -5,3 +5,6 @@ requires = ['trampolim']
 [project]
 name = 'vcs-version3'
 license = { text = '...' }
+dynamic = [
+    'version',
+]

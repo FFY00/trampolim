@@ -5,3 +5,6 @@ requires = ['trampolim']
 [project]
 name = 'no-version'
 license = { text = '...' }
+dynamic = [
+    'version',
+]
