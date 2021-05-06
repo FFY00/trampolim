@@ -20,7 +20,7 @@ Your `pyproject.toml` should look something like this:
 ```toml
 [build-system]
 build-backend = 'trampolim'
-requires = ['trampolim']
+requires = ['trampolim~=0.0.1']
 
 [project]
 name = 'sample_project'
