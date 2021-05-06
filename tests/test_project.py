@@ -483,7 +483,7 @@ def test_full_metadata(package_full_metadata):
 
 def test_rfc822_metadata(package_full_metadata):
     assert str(trampolim._build.Project().metadata) == textwrap.dedent('''
-        Metadata-Version: 2.1
+        Metadata-Version: 2.2
         Name: full-metadata
         Version: 3.2.1
         Summary: A package with all the metadata :)
@@ -516,7 +516,7 @@ def test_rfc822_metadata(package_full_metadata):
 
 def test_rfc822_metadata_bytes(package_sample_source):
     assert trampolim._build.Project().metadata.as_bytes() == textwrap.dedent('''
-        Metadata-Version: 2.1
+        Metadata-Version: 2.2
         Name: sample-source
         Version: 0.0.0
     ''').lstrip().encode()

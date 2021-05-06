@@ -521,7 +521,7 @@ class Project():
     def metadata(self) -> 'RFC822Message':  # noqa: C901
         '''dist-info METADATA.'''
         metadata = RFC822Message()
-        metadata['Metadata-Version'] = '2.1'
+        metadata['Metadata-Version'] = '2.2'
         metadata['Name'] = self.name
         metadata['Version'] = self.version
         # skip 'Platform' -- we currently only support pure
