@@ -577,8 +577,12 @@ class SdistBuilder():
         self._project = project
 
     @property
+    def name(self) -> str:
+        return f'{self._project.name}-{self._project.version}'
+
+    @property
     def file(self) -> str:
-        return f'{self._project.name}-{self._project.version}.tar.gz'
+        return f'{self.name}.tar.gz'
 
     def build(self, path: Path) -> None:
         # reproducibility
@@ -602,25 +606,25 @@ class SdistBuilder():
         )
 
         # add pyproject.toml
-        tar.add('pyproject.toml')
+        tar.add('pyproject.toml', f'{self.name}/pyproject.toml')
 
         # add source
         for source_path in self._project.source:
-            tar.add(source_path)
+            tar.add(source_path, f'{self.name}/{source_path}')
 
         # add license
         if self._project.license_file:
-            tar.add(str(self._project.license_file))
+            tar.add(self._project.license_file, f'{self.name}/{self._project.license_file}')
         elif self._project.license_text:
             license_raw = self._project.license_text.encode()
-            info = tarfile.TarInfo('LICENSE')
+            info = tarfile.TarInfo(f'{self.name}/LICENSE')
             info.size = len(license_raw)
             with io.BytesIO(license_raw) as data:
                 tar.addfile(info, data)
 
         # PKG-INFO
         pkginfo = self._project.metadata.as_bytes()
-        info = tarfile.TarInfo('PKG-INFO')
+        info = tarfile.TarInfo(f'{self.name}/PKG-INFO')
         info.size = len(pkginfo)
         with io.BytesIO(pkginfo) as data:
             tar.addfile(info, data)
