@@ -13,7 +13,7 @@ import tarfile
 import typing
 import warnings
 
-from typing import IO, Any, List, Optional, Sequence, Type, Union
+from typing import IO, Dict, List, Optional, Sequence, Tuple, Union
 
 import toml
 
@@ -40,6 +40,18 @@ class TrampolimWarning(Warning):
 
 
 class Project():
+    _VALID_KEYS = {
+        'license': [
+            'file',
+            'text',
+        ],
+        'readme': [
+            'content-type',
+            'file',
+            'text',
+        ]
+    }
+
     def __init__(self, _toml: Optional[str] = None) -> None:
         if _toml is not None:
             self._pyproject = toml.loads(_toml)
@@ -64,49 +76,63 @@ class Project():
                     TrampolimWarning,
                 )
 
-    def _validate_type(self, key: str, type: Type[Any]) -> None:
-        '''Validate a key type in the project table.
-
-        Throws KeyError if the key is not found.
-        '''
-        value = self._project
-        for part in key.split('.'):
-            value = value[part]
-        if not isinstance(value, type):
-            raise ConfigurationError(
-                f'Field `project.{key}` has an invalid type, '
-                f'expecting string (got `{type(value)}`)'
-            )
-
     def _validate(self) -> None:
         '''Validate the project table.'''
-        for field in ('name', 'license'):
-            if field not in self._project:
-                raise ConfigurationError(f'Field `project.{field}` missing pyproject.toml')
-
-        # name
-        self._validate_type('name', str)
-
-        # version
-        if 'version' in self._project:
-            self._validate_type('version', str)
+        if 'name' not in self._project:
+            raise ConfigurationError('Field `project.name` missing pyproject.toml')
 
         # license
-        if (
-            ('file' not in self._project['license'] and 'text' not in self._project['license']) or
-            ('file' in self._project['license'] and 'text' in self._project['license'])
-        ):
-            raise ConfigurationError(
-                'Invalid `project.license` value in pyproject.toml, '
-                f'expecting either `file` or `text` (got `{self._project["license"]}`)'
-            )
-        for field in ('file', 'text'):
-            try:
-                self._validate_type('.'.join(['license', field]), str)
-            except KeyError:
-                continue
-        if self.license_file and not os.path.isfile(self.license_file):
-            raise ConfigurationError(f'License file not found (`{self.license_file}`)')
+        if 'license' in self._project:
+            license = self._pget_dict('license')
+            if (
+                ('file' not in license and 'text' not in license) or
+                ('file' in license and 'text' in license)
+            ):
+                raise ConfigurationError(
+                    'Invalid `project.license` value in pyproject.toml, '
+                    f'expecting either `file` or `text` (got `{license}`)'
+                )
+            if self.license_file and not os.path.isfile(self.license_file):
+                raise ConfigurationError(f'License file not found (`{self.license_file}`)')
+
+        # readme
+        if 'readme' in self._project and not isinstance(self._project['readme'], str):
+            readme = self._pget_dict('readme')
+            if (
+                ('file' not in readme and 'text' not in readme) or
+                ('file' in readme and 'text' in readme)
+            ):
+                raise ConfigurationError(
+                    'Invalid `project.readme` value in pyproject.toml, '
+                    f'expecting either `file` or `text` (got `{readme}`)'
+                )
+            if 'content-type' in readme and 'text' not in readme:
+                raise ConfigurationError(
+                    'Unexpected field `project.readme.context-type` '
+                    '(because `project.readme.text` was not specified)'
+                )
+            if self.readme_file and not os.path.isfile(self.readme_file):
+                raise ConfigurationError(f'Readme file not found (`{self.readme_file}`)')
+
+        # try to fetch the fields to run validation -- we do validation on the getters because mypy
+        self.name
+        self.description
+        self.dependencies
+        self.keywords
+        self.license_file
+        self.license_text
+        self.readme_file
+        self.readme_text
+        self.authors
+        self.maintainers
+        self.classifiers
+        self.homepage
+        self.documentation
+        self.repository
+        self.changelog
+        self.scripts
+        self.gui_scripts
+        self.entrypoints
 
     @property
     def source(self) -> List[str]:
@@ -141,8 +167,8 @@ class Project():
     @cached_property
     def name(self) -> str:
         '''Project name.'''
-        name = self._project['name']
-        assert isinstance(name, str)
+        name = self._pget_str('name')
+        assert name
         return re.sub(r'[-_.]+', '-', name).lower()
 
     @cached_property
@@ -189,27 +215,227 @@ class Project():
             'TRAMPOLIM_VCS_VERSION environment variable to manually override the version)'
         )
 
-    @cached_property
-    def license_file(self) -> Optional[str]:
-        '''Project license file (if any).'''
+    @property
+    def python_tags(self) -> List[str]:
+        return ['py3']
+
+    @property
+    def python_tag(self) -> str:
+        return '.'.join(self.python_tags)
+
+    @property
+    def abi_tag(self) -> str:
+        return 'none'
+
+    @property
+    def platform_tag(self) -> str:
+        return 'any'
+
+    def _pget_str(self, key: str) -> Optional[str]:
         try:
-            file = self._project['license']['file']
-            assert isinstance(file, str)
-            return file
+            val = self._project
+            for part in key.split('.'):
+                val = val[part]
+            if not isinstance(val, str):
+                raise ConfigurationError(
+                    f'Field `project.{key}` has an invalid type, '
+                    f'expecting a string (got `{val}`)'
+                )
+            return val
         except KeyError:
             return None
 
+    def _pget_list(self, key: str) -> List[str]:
+        try:
+            val = self._project
+            for part in key.split('.'):
+                val = val[part]
+            if not isinstance(val, list):
+                raise ConfigurationError(
+                    f'Field `project.{key}` has an invalid type, '
+                    f'expecting a list of strings (got `{val}`)'
+                )
+            for item in val:
+                if not isinstance(item, str):
+                    raise ConfigurationError(
+                        f'Field `project.{key}` contains item with invalid type, '
+                        f'expecting a string (got `{item}`)'
+                    )
+            return val
+        except KeyError:
+            return []
+
+    def _pget_dict(self, key: str) -> Dict[str, str]:
+        try:
+            val = self._project
+            for part in key.split('.'):
+                val = val[part]
+            if not isinstance(val, dict):
+                raise ConfigurationError(
+                    f'Field `project.{key}` has an invalid type, '
+                    f'expecting a dictionary of strings (got `{val}`)'
+                )
+            valid_keys = self._VALID_KEYS.get(key)
+            for subkey, item in val.items():
+                if valid_keys and subkey not in valid_keys:
+                    raise ConfigurationError(f'Unexpected field `project.{key}.{subkey}`')
+                if not isinstance(item, str):
+                    raise ConfigurationError(
+                        f'Field `project.{key}.{subkey}` has an invalid type, '
+                        f'expecting a string (got `{item}`)'
+                    )
+            return val
+        except KeyError:
+            return {}
+
+    def _pget_people(self, key: str) -> List[Tuple[str, str]]:
+        try:
+            val = self._project
+            for part in key.split('.'):
+                val = val[part]
+            if not (
+                isinstance(val, list)
+                and all(isinstance(x, dict) for x in val)
+                and all(
+                    isinstance(item, str)
+                    for items in [_dict.values() for _dict in val]
+                    for item in items
+                )
+            ):
+                raise ConfigurationError(
+                    f'Field `project.{key}` has an invalid type, expecting a list of '
+                    f'dictionaries containing the `name` and/or `email` keys (got `{val}`)'
+                )
+            return [
+                (entry.get('name', 'Unknown'), entry.get('email'))
+                for entry in val
+            ]
+        except KeyError:
+            return []
+
     @cached_property
-    def license(self) -> str:
+    def description(self) -> Optional[str]:
+        '''Project description.'''
+        return self._pget_str('description')
+
+    @cached_property
+    def dependencies(self) -> List[str]:
+        '''Project dependencies.'''
+        return self._pget_list('dependencies')
+
+    @cached_property
+    def keywords(self) -> List[str]:
+        '''Project keywords.'''
+        return self._pget_list('keywords')
+
+    @cached_property
+    def license_file(self) -> Optional[str]:
+        '''Project license file (if any).'''
+        return self._pget_str('license.file')
+
+    @cached_property
+    def license_text(self) -> Optional[str]:
         '''Project license text.'''
-        assert self._project['license']
         if self.license_file:
             with open(self.license_file) as f:
                 return f.read()
         else:
-            text = self._project['license']['text']
-            assert isinstance(text, str)
-            return text
+            val = self._pget_str('license.text')
+            if val and '\n' in val:  # pragma: no cover
+                raise ConfigurationError('Newlines are not supported in the `project.license.text` field')
+            return val
+
+    @cached_property
+    def readme_file(self) -> Optional[str]:
+        '''Project readme file (if any).'''
+        if 'readme' not in self._project:
+            return None
+        val = self._project['readme']
+        if isinstance(val, str):
+            return val
+        return self._pget_dict('readme').get('file')
+
+    @cached_property
+    def readme_text(self) -> Optional[str]:
+        '''Project readme text.'''
+        if self.readme_file:
+            with open(self.readme_file) as f:
+                return f.read()
+        else:
+            return self._pget_str('readme.text')
+
+    @cached_property
+    def authors(self) -> List[Tuple[str, str]]:
+        '''Project authors.'''
+        return self._pget_people('authors')
+
+    @cached_property
+    def maintainers(self) -> List[Tuple[str, str]]:
+        '''Project maintainers.'''
+        return self._pget_people('maintainers')
+
+    @cached_property
+    def classifiers(self) -> List[str]:
+        '''Project trove classifiers.'''
+        return self._pget_list('classifiers')
+
+    @cached_property
+    def homepage(self) -> Optional[str]:
+        '''Project homepage.'''
+        return self._pget_str('urls.homepage')
+
+    @cached_property
+    def documentation(self) -> Optional[str]:
+        '''Project documentation.'''
+        return self._pget_str('urls.documentation')
+
+    @cached_property
+    def repository(self) -> Optional[str]:
+        '''Project repository.'''
+        return self._pget_str('urls.repository')
+
+    @cached_property
+    def changelog(self) -> Optional[str]:
+        '''Project repository.'''
+        return self._pget_str('urls.changelog')
+
+    @cached_property
+    def scripts(self) -> Dict[str, str]:
+        '''Project console script entrypoints.'''
+        return self._pget_dict('scripts')
+
+    @cached_property
+    def gui_scripts(self) -> Dict[str, str]:
+        '''Project GUI script entrypoints.'''
+        return self._pget_dict('gui-scripts')
+
+    @cached_property
+    def entrypoints(self) -> Dict[str, Dict[str, str]]:
+        '''Project extra entrypoints.'''
+        try:
+            val = self._project['entry-points']
+            if not isinstance(val, dict):
+                raise ConfigurationError(
+                    'Field `project.entry-points` has an invalid type, expecting a '
+                    f'dictionary of entrypoint sections (got `{val}`)'
+                )
+            for section, entrypoints in val.items():
+                assert isinstance(section, str)
+                if not isinstance(entrypoints, dict):
+                    raise ConfigurationError(
+                        f'Field `project.entry-points.{section}` has an invalid type, expecting a '
+                        f'dictionary of entrypoints (got `{entrypoints}`)'
+                    )
+                for name, entrypoint in entrypoints.items():
+                    assert isinstance(name, str)
+                    if not isinstance(entrypoint, str):
+                        raise ConfigurationError(
+                            f'Field `project.entry-points.{section}.{name}` has an invalid type, '
+                            f'expecting a string (got `{entrypoint}`)'
+                        )
+            return val
+        except KeyError:
+            return {}
 
 
 class SdistBuilder():
@@ -256,8 +482,8 @@ class SdistBuilder():
         # add license
         if self._project.license_file:
             tar.add(str(self._project.license_file))
-        else:
-            license_raw = self._project.license.encode()
+        elif self._project.license_text:
+            license_raw = self._project.license_text.encode()
             info = tarfile.TarInfo('LICENSE')
             info.size = len(license_raw)
             with io.BytesIO(license_raw) as data:

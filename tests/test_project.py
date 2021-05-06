@@ -14,14 +14,16 @@ import trampolim._build
     ('data', 'error'),
     [
         ('', 'Missing section `project` in pyproject.toml'),
+        # name
         ('[project]', 'Field `project.name` missing pyproject.toml'),
         (
             textwrap.dedent('''
                 [project]
-                name = 'test'
+                name = true
             '''),
-            'Field `project.license` missing pyproject.toml',
+            re.escape('Field `project.name` has an invalid type, expecting a string (got `True`)'),
         ),
+        # license
         (
             textwrap.dedent('''
                 [project]
@@ -41,7 +43,7 @@ import trampolim._build
             '''),
             re.escape(
                 'Invalid `project.license` value in pyproject.toml, '
-                'expecting either `file` or `text` (got `{\'file\': \'...\', \'text\': \'...\'}`)'
+                "expecting either `file` or `text` (got `{'file': '...', 'text': '...'}`)"
             ),
         ),
         (
@@ -51,8 +53,7 @@ import trampolim._build
                 license = { made-up = ':(' }
             '''),
             re.escape(
-                'Invalid `project.license` value in pyproject.toml, '
-                "expecting either `file` or `text` (got `{'made-up': ':('}`)"
+                'Unexpected field `project.license.made-up`'
             ),
         ),
         (
@@ -61,7 +62,7 @@ import trampolim._build
                 name = 'test'
                 license = { file = true }
             '''),
-            re.escape('Field `project.license.file` has an invalid type, expecting string (got `True`)'),
+            re.escape('Field `project.license.file` has an invalid type, expecting a string (got `True`)'),
         ),
         (
             textwrap.dedent('''
@@ -69,7 +70,7 @@ import trampolim._build
                 name = 'test'
                 license = { text = true }
             '''),
-            re.escape('Field `project.license.text` has an invalid type, expecting string (got `True`)'),
+            re.escape('Field `project.license.text` has an invalid type, expecting a string (got `True`)'),
         ),
         (
             textwrap.dedent('''
@@ -79,11 +80,322 @@ import trampolim._build
             '''),
             re.escape('License file not found (`this-file-does-not-exist`)'),
         ),
+        # readme
+        (
+            textwrap.dedent('''
+                [project]
+                name = 'test'
+                readme = {}
+            '''),
+            re.escape(
+                'Invalid `project.readme` value in pyproject.toml, '
+                'expecting either `file` or `text` (got `{}`)'
+            ),
+        ),
+        (
+            textwrap.dedent('''
+                [project]
+                name = 'test'
+                readme = { file = '...', text = '...' }
+            '''),
+            re.escape(
+                'Invalid `project.readme` value in pyproject.toml, '
+                "expecting either `file` or `text` (got `{'file': '...', 'text': '...'}`)"
+            ),
+        ),
+        (
+            textwrap.dedent('''
+                [project]
+                name = 'test'
+                readme = { made-up = ':(' }
+            '''),
+            re.escape(
+                'Unexpected field `project.readme.made-up`'
+            ),
+        ),
+        (
+            textwrap.dedent('''
+                [project]
+                name = 'test'
+                readme = { file = true }
+            '''),
+            re.escape('Field `project.readme.file` has an invalid type, expecting a string (got `True`)'),
+        ),
+        (
+            textwrap.dedent('''
+                [project]
+                name = 'test'
+                readme = { text = true }
+            '''),
+            re.escape('Field `project.readme.text` has an invalid type, expecting a string (got `True`)'),
+        ),
+        (
+            textwrap.dedent('''
+                [project]
+                name = 'test'
+                readme = { file = 'this-file-does-not-exist' }
+            '''),
+            re.escape('Readme file not found (`this-file-does-not-exist`)'),
+        ),
+        (
+            textwrap.dedent('''
+                [project]
+                name = 'test'
+                readme = { file = '...', content-type = 'should not be here' }
+            '''),
+            re.escape('Unexpected field `project.readme.context-type` (because `project.readme.text` was not specified)'),
+        ),
+        # description
+        (
+            textwrap.dedent('''
+                [project]
+                name = 'test'
+                description = true
+            '''),
+            re.escape('Field `project.description` has an invalid type, expecting a string (got `True`)'),
+        ),
+        # dependencies
+        (
+            textwrap.dedent('''
+                [project]
+                name = 'test'
+                dependencies = 'some string!'
+            '''),
+            re.escape('Field `project.dependencies` has an invalid type, expecting a list of strings (got `some string!`)'),
+        ),
+        (
+            textwrap.dedent('''
+                [project]
+                name = 'test'
+                dependencies = [
+                    99,
+                ]
+            '''),
+            re.escape('Field `project.dependencies` contains item with invalid type, expecting a string (got `99`)'),
+        ),
+        # keywords
+        (
+            textwrap.dedent('''
+                [project]
+                name = 'test'
+                keywords = 'some string!'
+            '''),
+            re.escape('Field `project.keywords` has an invalid type, expecting a list of strings (got `some string!`)'),
+        ),
+        (
+            textwrap.dedent('''
+                [project]
+                name = 'test'
+                keywords = [
+                    true,
+                ]
+            '''),
+            re.escape('Field `project.keywords` contains item with invalid type, expecting a string (got `True`)'),
+        ),
+        # authors
+        (
+            textwrap.dedent('''
+                [project]
+                name = 'test'
+                authors = {}
+            '''),
+            re.escape(
+                'Field `project.authors` has an invalid type, expecting a list of '
+                'dictionaries containing the `name` and/or `email` keys (got `{}`)'
+            ),
+        ),
+        (
+            textwrap.dedent('''
+                [project]
+                name = 'test'
+                authors = [
+                    true,
+                ]
+            '''),
+            re.escape(
+                'Field `project.authors` has an invalid type, expecting a list of '
+                'dictionaries containing the `name` and/or `email` keys (got `[True]`)'
+            ),
+        ),
+        # maintainers
+        (
+            textwrap.dedent('''
+                [project]
+                name = 'test'
+                maintainers = {}
+            '''),
+            re.escape(
+                'Field `project.maintainers` has an invalid type, expecting a list of '
+                'dictionaries containing the `name` and/or `email` keys (got `{}`)'
+            ),
+        ),
+        (
+            textwrap.dedent('''
+                [project]
+                name = 'test'
+                maintainers = [
+                    10
+                ]
+            '''),
+            re.escape(
+                'Field `project.maintainers` has an invalid type, expecting a list of '
+                'dictionaries containing the `name` and/or `email` keys (got `[10]`)'
+            ),
+        ),
+        # classifiers
+        (
+            textwrap.dedent('''
+                [project]
+                name = 'test'
+                classifiers = 'some string!'
+            '''),
+            re.escape('Field `project.classifiers` has an invalid type, expecting a list of strings (got `some string!`)'),
+        ),
+        (
+            textwrap.dedent('''
+                [project]
+                name = 'test'
+                classifiers = [
+                    true,
+                ]
+            '''),
+            re.escape('Field `project.classifiers` contains item with invalid type, expecting a string (got `True`)'),
+        ),
+        # homepage
+        (
+            textwrap.dedent('''
+                [project]
+                name = 'test'
+                [project.urls]
+                homepage = true
+            '''),
+            re.escape('Field `project.urls.homepage` has an invalid type, expecting a string (got `True`)'),
+        ),
+        # documentation
+        (
+            textwrap.dedent('''
+                [project]
+                name = 'test'
+                [project.urls]
+                documentation = true
+            '''),
+            re.escape('Field `project.urls.documentation` has an invalid type, expecting a string (got `True`)'),
+        ),
+        # repository
+        (
+            textwrap.dedent('''
+                [project]
+                name = 'test'
+                [project.urls]
+                repository = true
+            '''),
+            re.escape('Field `project.urls.repository` has an invalid type, expecting a string (got `True`)'),
+        ),
+        # changelog
+        (
+            textwrap.dedent('''
+                [project]
+                name = 'test'
+                [project.urls]
+                changelog = true
+            '''),
+            re.escape('Field `project.urls.changelog` has an invalid type, expecting a string (got `True`)'),
+        ),
+        # scripts
+        (
+            textwrap.dedent('''
+                [project]
+                name = 'test'
+                scripts = []
+            '''),
+            re.escape('Field `project.scripts` has an invalid type, expecting a dictionary of strings (got `[]`)'),
+        ),
+        # gui-scripts
+        (
+            textwrap.dedent('''
+                [project]
+                name = 'test'
+                gui-scripts = []
+            '''),
+            re.escape('Field `project.gui-scripts` has an invalid type, expecting a dictionary of strings (got `[]`)'),
+        ),
+        # entry-points
+        (
+            textwrap.dedent('''
+                [project]
+                name = 'test'
+                entry-points = []
+            '''),
+            re.escape(
+                'Field `project.entry-points` has an invalid type, '
+                'expecting a dictionary of entrypoint sections (got `[]`)'
+            ),
+        ),
+        (
+            textwrap.dedent('''
+                [project]
+                name = 'test'
+                entry-points = { section = 'something' }
+            '''),
+            re.escape(
+                'Field `project.entry-points.section` has an invalid type, '
+                'expecting a dictionary of entrypoints (got `something`)'
+            ),
+        ),
+        (
+            textwrap.dedent('''
+                [project]
+                name = 'test'
+                [project.entry-points.section]
+                entrypoint = []
+            '''),
+            re.escape('Field `project.entry-points.section.entrypoint` has an invalid type, expecting a string (got `[]`)'),
+        ),
     ]
 )
 def test_validate(package_sample_source, data, error):
     with pytest.raises(trampolim.ConfigurationError, match=error):
         trampolim._build.Project(_toml=data)
+
+
+def test_full_metadata(package_full_metadata):
+    p = trampolim._build.Project()
+    assert p.name == 'full-metadata'
+    assert p.version == '3.2.1'
+    assert p.description == 'A package with all the metadata :)'
+    assert p.license_text == 'some license text'
+    assert p.keywords == ['trampolim', 'is', 'interesting']
+    assert p.authors == [
+        ('Unknown', 'example@example.com'),
+        ('Example!', None),
+    ]
+    assert p.maintainers == [
+        ('Other Example', 'other@example.com'),
+    ]
+    assert p.classifiers == [
+        'Development Status :: 4 - Beta',
+        'Programming Language :: Python'
+    ]
+    assert p.homepage == 'example.com'
+    assert p.documentation == 'readthedocs.org'
+    assert p.repository == 'github.com/some/repo'
+    assert p.changelog == 'github.com/some/repo/blob/master/CHANGELOG.rst'
+    assert p.scripts == {
+        'full-metadata': 'full_metadata:main_cli',
+    }
+    assert p.gui_scripts == {
+        'full-metadata-gui': 'full_metadata:main_gui',
+    }
+    assert p.entrypoints == {
+        'custom': {
+            'full-metadata': 'full_metadata:main_custom',
+        }
+    }
+    assert p.python_tags == ['py3']
+    assert p.python_tag == 'py3'
+    assert p.abi_tag == 'none'
+    assert p.platform_tag == 'any'
+    # TODO: requires-python, dependencies, optional-dependencies
 
 
 def test_no_module(package_no_module):
@@ -141,11 +453,11 @@ def test_license_file(package_license_file):
 
 
 def test_license_text_inline(package_license_text):
-    assert trampolim._build.Project().license == 'inline license!'
+    assert trampolim._build.Project().license_text == 'inline license!'
 
 
 def test_license_text_from_file(package_license_file):
-    assert trampolim._build.Project().license == 'blah\n'
+    assert trampolim._build.Project().license_text == 'blah\n'
 
 
 def test_version(package_sample_source):
