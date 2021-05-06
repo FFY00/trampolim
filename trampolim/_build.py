@@ -113,6 +113,7 @@ class Project():
         self.name
         self.description
         self.dependencies
+        self.requires_python
         self.keywords
         self.license_file
         self.license_text
@@ -320,6 +321,11 @@ class Project():
         return self._pget_list('dependencies')
 
     @cached_property
+    def requires_python(self) -> Optional[str]:
+        '''Project Python requirements.'''
+        return self._pget_str('requires-python')
+
+    @cached_property
     def keywords(self) -> List[str]:
         '''Project keywords.'''
         return self._pget_list('keywords')
@@ -481,7 +487,6 @@ class Project():
             metadata['Classifier'] = classifier
         # skip 'Provides-Dist'
         # skip 'Obsoletes-Dist'
-        # TODO: 'Requires-Python'
         # skip 'Requires-External'
         if self.documentation:
             metadata['Project-URL'] = f'Documentation, {self.documentation}'
@@ -491,6 +496,8 @@ class Project():
             metadata['Project-URL'] = f'Changelog, {self.changelog}'
         # TODO: 'Description-Content-Type'
         # TODO: 'Provides-Extra'
+        if self.requires_python:
+            metadata['Requires-Python'] = self.requires_python
         for dep in self.dependencies:
             metadata['Requires-Dist'] = dep  # XXX
         metadata.body = self.readme_text

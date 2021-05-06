@@ -173,6 +173,15 @@ import trampolim._build
             '''),
             re.escape('Field `project.dependencies` contains item with invalid type, expecting a string (got `99`)'),
         ),
+        # requires-python
+        (
+            textwrap.dedent('''
+                [project]
+                name = 'test'
+                requires-python = true
+            '''),
+            re.escape('Field `project.requires-python` has an invalid type, expecting a string (got `True`)'),
+        ),
         # keywords
         (
             textwrap.dedent('''
@@ -415,6 +424,7 @@ def test_rfc822_metadata(package_full_metadata):
         Project-URL: Documentation, readthedocs.org
         Project-URL: Repository, github.com/some/repo
         Project-URL: Changelog, github.com/some/repo/blob/master/CHANGELOG.rst
+        Requires-Python: >=3.8
         Requires-Dist: dependency1
         Requires-Dist: dependency2>1.0.0
         Requires-Dist: dependency3[extra]
