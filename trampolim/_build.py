@@ -499,7 +499,7 @@ class Project():
         if self.requires_python:
             metadata['Requires-Python'] = self.requires_python
         for dep in self.dependencies:
-            metadata['Requires-Dist'] = dep  # XXX
+            metadata['Requires-Dist'] = dep
         metadata.body = self.readme_text
         # print(str(metadata), end='')
         return metadata
