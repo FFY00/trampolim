@@ -7,6 +7,8 @@ import trampolim._build
 from trampolim._build import ConfigurationError, TrampolimError  # noqa: F401
 
 
+__version__ = '0.0.0'
+
 # get_requires
 
 
@@ -50,4 +52,10 @@ def build_wheel(
     config_settings: Optional[Dict[str, Any]] = None,
     metadata_directory: Optional[trampolim._build.Path] = None,
 ) -> str:
-    raise NotImplementedError
+    import trampolim._wheel
+
+    project = trampolim._build.Project()
+    builder = trampolim._wheel.WheelBuilder(project)
+
+    builder.build(wheel_directory)
+    return builder.file
