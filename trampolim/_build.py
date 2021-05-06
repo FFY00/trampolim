@@ -148,6 +148,7 @@ class Project():
         '''Project source.'''
         source = []
 
+        # TODO: ignore files not escaped as specified in PEP 427
         for module in self.root_modules:
             if module.endswith('.py'):  # file
                 source.append(module)
