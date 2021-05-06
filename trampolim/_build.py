@@ -622,6 +622,10 @@ class SdistBuilder():
             with io.BytesIO(license_raw) as data:
                 tar.addfile(info, data)
 
+        # add readme
+        if self._project.readme_file:
+            tar.add(self._project.readme_file, f'{self.name}/{self._project.readme_file}')
+
         # PKG-INFO
         pkginfo = self._project.metadata.as_bytes()
         info = tarfile.TarInfo(f'{self.name}/PKG-INFO')

@@ -31,6 +31,15 @@ def test_license_text(package_license_text, sdist_license_text):
     assert t.extractfile('license-text-0.0.0/LICENSE').read() == 'inline license!'.encode()
 
 
+def test_readme_file(package_readme_md, sdist_readme_md):
+    t = tarfile.open(sdist_readme_md, 'r')
+
+    data = t.extractfile('readme-md-1.0.0/README.md')
+
+    with open(package_readme_md / 'README.md', 'rb') as f:
+        assert f.read() == data.read()
+
+
 def test_source(package_sample_source, sdist_sample_source):
     t = tarfile.open(sdist_sample_source, 'r')
 
