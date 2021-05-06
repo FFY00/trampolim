@@ -39,7 +39,7 @@ def tmp_dir():
 
 @pytest.fixture(scope='session')
 def tmp_dir_session():
-    path = tempfile.mkdtemp(prefix='python-build-test-')
+    path = tempfile.mkdtemp(prefix='trampolim-test-')
 
     try:
         yield pathlib.Path(path)
