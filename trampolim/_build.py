@@ -106,13 +106,8 @@ class Project():
                     'Invalid `project.readme` value in pyproject.toml, '
                     f'expecting either `file` or `text` (got `{readme}`)'
                 )
-            if 'content-type' in readme and 'text' not in readme:
-                raise ConfigurationError(
-                    'Unexpected field `project.readme.context-type` '
-                    '(because `project.readme.text` was not specified)'
-                )
-            if self.readme_file and not os.path.isfile(self.readme_file):
-                raise ConfigurationError(f'Readme file not found (`{self.readme_file}`)')
+        if self.readme_file and not os.path.isfile(self.readme_file):
+            raise ConfigurationError(f'Readme file not found (`{self.readme_file}`)')
 
         # try to fetch the fields to run validation -- we do validation on the getters because mypy
         self.name
@@ -123,6 +118,7 @@ class Project():
         self.license_text
         self.readme_file
         self.readme_text
+        self.readme_content_type
         self.authors
         self.maintainers
         self.classifiers
@@ -363,6 +359,23 @@ class Project():
                 return f.read()
         else:
             return self._pget_str('readme.text')
+
+    @cached_property
+    def readme_content_type(self) -> Optional[str]:
+        '''Project readme content type.'''
+        if 'readme' not in self._project:
+            return None
+        if isinstance(self._project['readme'], str):
+            assert self.readme_file
+            if self.readme_file.endswith('.md'):
+                return 'text/markdown'
+            if self.readme_file.endswith('.rst'):
+                return 'text/x-rst'
+            raise TrampolimError(f'Could not infer content type for readme file `{self.readme_file}`')
+        val = self._pget_dict('readme')
+        if 'content-type' not in val:
+            raise ConfigurationError('Missing field `project.readme.content-type`')
+        return val['content-type']
 
     @cached_property
     def authors(self) -> List[Tuple[str, str]]:

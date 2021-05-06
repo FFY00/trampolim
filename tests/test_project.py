@@ -141,9 +141,9 @@ import trampolim._build
             textwrap.dedent('''
                 [project]
                 name = 'test'
-                readme = { file = '...', content-type = 'should not be here' }
+                readme = { file = 'README.md' }
             '''),
-            re.escape('Unexpected field `project.readme.context-type` (because `project.readme.text` was not specified)'),
+            re.escape('Missing field `project.readme.content-type`'),
         ),
         # description
         (
@@ -353,7 +353,7 @@ import trampolim._build
         ),
     ]
 )
-def test_validate(package_sample_source, data, error):
+def test_validate(package_full_metadata, data, error):
     with pytest.raises(trampolim.ConfigurationError, match=error):
         trampolim._build.Project(_toml=data)
 
@@ -396,6 +396,26 @@ def test_full_metadata(package_full_metadata):
     assert p.abi_tag == 'none'
     assert p.platform_tag == 'any'
     # TODO: requires-python, dependencies, optional-dependencies
+
+
+def test_readme_md(package_readme_md):
+    assert trampolim._build.Project().readme_content_type == 'text/markdown'
+
+
+def test_readme_rst(package_readme_rst):
+    assert trampolim._build.Project().readme_content_type == 'text/x-rst'
+
+
+def test_readme_unknown(package_readme_unknown):
+    with pytest.raises(
+        trampolim.TrampolimError,
+        match=re.escape('Could not infer content type for readme file `README.unknown`'),
+    ):
+        assert trampolim._build.Project().readme_content_type
+
+
+def test_readme_unknown_with_type(package_readme_unknown_with_type):
+    assert trampolim._build.Project().readme_content_type == 'text/some-unknown-type'
 
 
 def test_no_module(package_no_module):

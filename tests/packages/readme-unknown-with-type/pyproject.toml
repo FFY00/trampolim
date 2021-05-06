@@ -1,0 +1,8 @@
+[build-system]
+build-backend = 'trampolim'
+requires = ['trampolim']
+
+[project]
+name = 'readme-unknown-with-type'
+version = '1.0.0'
+readme = { file = 'README.unknown', content-type = 'text/some-unknown-type' }

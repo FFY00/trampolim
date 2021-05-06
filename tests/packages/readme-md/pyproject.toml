@@ -1,0 +1,8 @@
+[build-system]
+build-backend = 'trampolim'
+requires = ['trampolim']
+
+[project]
+name = 'readme-md'
+version = '1.0.0'
+readme = 'README.md'
