@@ -52,8 +52,8 @@ test = [
 sample_entrypoint = 'sample_project:entrypoint_function'
 
 [project.urls]
-homepage = 'my-sample-project-website.example.com'
-documentation = 'github.com/some-user/sample-project'
-repository = 'github.com/some-user/sample-project'
-changelog = 'github.com/some-user/sample-project/blob/master/CHANGELOG.rst'
+homepage = 'https://my-sample-project-website.example.com'
+documentation = 'https://github.com/some-user/sample-project'
+repository = 'https://github.com/some-user/sample-project'
+changelog = 'https://github.com/some-user/sample-project/blob/master/CHANGELOG.rst'
 ```
