@@ -10,7 +10,7 @@ A modern Python build backend.
 
 - Task system, allowing to run arbitrary Python code during the build process (**Planned**)
 - Easy to use CLI -- build, publish, check for errors and recommended practices (**Planned**)
-- Automatic version detection from git repos and archives
+- Automatic version detection from git repos and git archives
 
 ### Usage
 
