@@ -2,6 +2,8 @@
 
 import tarfile
 
+import trampolim._build
+
 
 def test_pyproject(package_license_file, sdist_license_file):
     t = tarfile.open(sdist_license_file, 'r')
@@ -55,3 +57,10 @@ def test_source(package_sample_source, sdist_sample_source):
 
     for file in expected_source:
         assert file in t.getnames()
+
+
+def test_pkginfo(package_license_text, sdist_license_text):
+    p = trampolim._build.Project()
+    t = tarfile.open(sdist_license_text, 'r')
+
+    assert t.extractfile('PKG-INFO').read() == p.metadata.as_bytes()

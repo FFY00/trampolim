@@ -618,6 +618,13 @@ class SdistBuilder():
             with io.BytesIO(license_raw) as data:
                 tar.addfile(info, data)
 
+        # PKG-INFO
+        pkginfo = self._project.metadata.as_bytes()
+        info = tarfile.TarInfo('PKG-INFO')
+        info.size = len(pkginfo)
+        with io.BytesIO(pkginfo) as data:
+            tar.addfile(info, data)
+
         # cleanup
         tar.close()
         file.close()
