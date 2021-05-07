@@ -43,11 +43,11 @@ class TrampolimWarning(Warning):
 
 class Project():
     _VALID_KEYS = {
-        'license': [
+        'project.license': [
             'file',
             'text',
         ],
-        'readme': [
+        'project.readme': [
             'content-type',
             'file',
             'text',
@@ -69,7 +69,7 @@ class Project():
 
         self._project = self._pyproject['project']
 
-        dynamic = self._pget_list('dynamic')
+        dynamic = self._pget_list('project.dynamic')
         self._dynamic = dynamic if dynamic else []
         for field in self._dynamic:
             if field not in self._VALID_DYNAMIC:
@@ -94,7 +94,7 @@ class Project():
 
         # license
         if 'license' in self._project:
-            license = self._pget_dict('license')
+            license = self._pget_dict('project.license')
             if (
                 ('file' not in license and 'text' not in license) or
                 ('file' in license and 'text' in license)
@@ -108,7 +108,7 @@ class Project():
 
         # readme
         if 'readme' in self._project and not isinstance(self._project['readme'], str):
-            readme = self._pget_dict('readme')
+            readme = self._pget_dict('project.readme')
             if (
                 ('file' not in readme and 'text' not in readme) or
                 ('file' in readme and 'text' in readme)
@@ -177,7 +177,7 @@ class Project():
     @cached_property
     def name(self) -> str:
         '''Project name.'''
-        name = self._pget_str('name')
+        name = self._pget_str('project.name')
         assert name
         return re.sub(r'[-_.]+', '-', name).lower()
 
@@ -249,12 +249,12 @@ class Project():
 
     def _pget_str(self, key: str) -> Optional[str]:
         try:
-            val = self._project
+            val = self._pyproject
             for part in key.split('.'):
                 val = val[part]
             if not isinstance(val, str):
                 raise ConfigurationError(
-                    f'Field `project.{key}` has an invalid type, '
+                    f'Field `{key}` has an invalid type, '
                     f'expecting a string (got `{val}`)'
                 )
             return val
@@ -263,18 +263,18 @@ class Project():
 
     def _pget_list(self, key: str) -> List[str]:
         try:
-            val = self._project
+            val = self._pyproject
             for part in key.split('.'):
                 val = val[part]
             if not isinstance(val, list):
                 raise ConfigurationError(
-                    f'Field `project.{key}` has an invalid type, '
+                    f'Field `{key}` has an invalid type, '
                     f'expecting a list of strings (got `{val}`)'
                 )
             for item in val:
                 if not isinstance(item, str):
                     raise ConfigurationError(
-                        f'Field `project.{key}` contains item with invalid type, '
+                        f'Field `{key}` contains item with invalid type, '
                         f'expecting a string (got `{item}`)'
                     )
             return val
@@ -283,21 +283,21 @@ class Project():
 
     def _pget_dict(self, key: str) -> Dict[str, str]:
         try:
-            val = self._project
+            val = self._pyproject
             for part in key.split('.'):
                 val = val[part]
             if not isinstance(val, dict):
                 raise ConfigurationError(
-                    f'Field `project.{key}` has an invalid type, '
+                    f'Field `{key}` has an invalid type, '
                     f'expecting a dictionary of strings (got `{val}`)'
                 )
             valid_keys = self._VALID_KEYS.get(key)
             for subkey, item in val.items():
                 if valid_keys and subkey not in valid_keys:
-                    raise ConfigurationError(f'Unexpected field `project.{key}.{subkey}`')
+                    raise ConfigurationError(f'Unexpected field `{key}.{subkey}`')
                 if not isinstance(item, str):
                     raise ConfigurationError(
-                        f'Field `project.{key}.{subkey}` has an invalid type, '
+                        f'Field `{key}.{subkey}` has an invalid type, '
                         f'expecting a string (got `{item}`)'
                     )
             return val
@@ -306,7 +306,7 @@ class Project():
 
     def _pget_people(self, key: str) -> List[Tuple[str, str]]:
         try:
-            val = self._project
+            val = self._pyproject
             for part in key.split('.'):
                 val = val[part]
             if not (
@@ -319,7 +319,7 @@ class Project():
                 )
             ):
                 raise ConfigurationError(
-                    f'Field `project.{key}` has an invalid type, expecting a list of '
+                    f'Field `{key}` has an invalid type, expecting a list of '
                     f'dictionaries containing the `name` and/or `email` keys (got `{val}`)'
                 )
             return [
@@ -332,12 +332,12 @@ class Project():
     @cached_property
     def description(self) -> Optional[str]:
         '''Project description.'''
-        return self._pget_str('description')
+        return self._pget_str('project.description')
 
     @cached_property
     def dependencies(self) -> List[str]:
         '''Project dependencies.'''
-        return self._pget_list('dependencies')
+        return self._pget_list('project.dependencies')
 
     @cached_property
     def optional_dependencies(self) -> Dict[str, List[str]]:
@@ -376,17 +376,17 @@ class Project():
     @cached_property
     def requires_python(self) -> Optional[str]:
         '''Project Python requirements.'''
-        return self._pget_str('requires-python')
+        return self._pget_str('project.requires-python')
 
     @cached_property
     def keywords(self) -> List[str]:
         '''Project keywords.'''
-        return self._pget_list('keywords')
+        return self._pget_list('project.keywords')
 
     @cached_property
     def license_file(self) -> Optional[str]:
         '''Project license file (if any).'''
-        return self._pget_str('license.file')
+        return self._pget_str('project.license.file')
 
     @cached_property
     def license_text(self) -> Optional[str]:
@@ -395,7 +395,7 @@ class Project():
             with open(self.license_file) as f:
                 return f.read()
         else:
-            val = self._pget_str('license.text')
+            val = self._pget_str('project.license.text')
             if val and '\n' in val:  # pragma: no cover
                 raise ConfigurationError('Newlines are not supported in the `project.license.text` field')
             return val
@@ -408,7 +408,7 @@ class Project():
         val = self._project['readme']
         if isinstance(val, str):
             return val
-        return self._pget_dict('readme').get('file')
+        return self._pget_dict('project.readme').get('file')
 
     @cached_property
     def readme_text(self) -> Optional[str]:
@@ -417,7 +417,7 @@ class Project():
             with open(self.readme_file) as f:
                 return f.read()
         else:
-            return self._pget_str('readme.text')
+            return self._pget_str('project.readme.text')
 
     @cached_property
     def readme_content_type(self) -> Optional[str]:
@@ -431,7 +431,7 @@ class Project():
             if self.readme_file.endswith('.rst'):
                 return 'text/x-rst'
             raise TrampolimError(f'Could not infer content type for readme file `{self.readme_file}`')
-        val = self._pget_dict('readme')
+        val = self._pget_dict('project.readme')
         if 'content-type' not in val:
             raise ConfigurationError('Missing field `project.readme.content-type`')
         return val['content-type']
@@ -439,47 +439,47 @@ class Project():
     @cached_property
     def authors(self) -> List[Tuple[str, str]]:
         '''Project authors.'''
-        return self._pget_people('authors')
+        return self._pget_people('project.authors')
 
     @cached_property
     def maintainers(self) -> List[Tuple[str, str]]:
         '''Project maintainers.'''
-        return self._pget_people('maintainers')
+        return self._pget_people('project.maintainers')
 
     @cached_property
     def classifiers(self) -> List[str]:
         '''Project trove classifiers.'''
-        return self._pget_list('classifiers')
+        return self._pget_list('project.classifiers')
 
     @cached_property
     def homepage(self) -> Optional[str]:
         '''Project homepage.'''
-        return self._pget_str('urls.homepage')
+        return self._pget_str('project.urls.homepage')
 
     @cached_property
     def documentation(self) -> Optional[str]:
         '''Project documentation.'''
-        return self._pget_str('urls.documentation')
+        return self._pget_str('project.urls.documentation')
 
     @cached_property
     def repository(self) -> Optional[str]:
         '''Project repository.'''
-        return self._pget_str('urls.repository')
+        return self._pget_str('project.urls.repository')
 
     @cached_property
     def changelog(self) -> Optional[str]:
         '''Project repository.'''
-        return self._pget_str('urls.changelog')
+        return self._pget_str('project.urls.changelog')
 
     @cached_property
     def scripts(self) -> Dict[str, str]:
         '''Project console script entrypoints.'''
-        return self._pget_dict('scripts')
+        return self._pget_dict('project.scripts')
 
     @cached_property
     def gui_scripts(self) -> Dict[str, str]:
         '''Project GUI script entrypoints.'''
-        return self._pget_dict('gui-scripts')
+        return self._pget_dict('project.gui-scripts')
 
     @cached_property
     def entrypoints(self) -> Dict[str, Dict[str, str]]:
