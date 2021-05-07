@@ -4,447 +4,46 @@ import os
 import re
 import textwrap
 
+import packaging.version
 import pytest
 
 import trampolim
 import trampolim._build
 
 
-@pytest.mark.parametrize(
-    ('data', 'error'),
-    [
-        ('', 'Missing section `project` in pyproject.toml'),
-        # name
-        ('[project]', 'Field `project.name` missing pyproject.toml'),
-        (
-            textwrap.dedent('''
-                [project]
-                name = true
-            '''),
-            re.escape('Field `project.name` has an invalid type, expecting a string (got `True`)'),
+def test_unsupported_dynamic():
+    with pytest.raises(
+        trampolim.ConfigurationError,
+        match=re.escape('Unsupported field `readme` in `project.dynamic`'),
+    ):
+        trampolim._build.Project(_toml='''
+            [project]
+            name = 'test'
+            dynamic = [
+                'readme',
+            ]
+        ''')
+
+
+def test_no_version():
+    with pytest.raises(
+        trampolim.ConfigurationError,
+        match=re.escape(
+            'Missing required field `project.version` (if you want to infer the '
+            'project version automatically, `version` needs to be added to the '
+            '`project.dynamic` list field'
         ),
-        # version
-        (
-            textwrap.dedent('''
-                [project]
-                name = 'test'
-            '''),
-            re.escape(
-                'Missing required field `project.version` (if you want to infer the project version '
-                'automatically, `version` needs to be added to the `project.dynamic` list field)'
-            ),
-        ),
-        # version
-        (
-            textwrap.dedent('''
-                [project]
-                dynamic = [
-                    'name',
-                ]
-            '''),
-            re.escape('Unsupported field in `project.dynamic`: `project.name`'),
-        ),
-        # license
-        (
-            textwrap.dedent('''
-                [project]
-                name = 'test'
-                license = {}
-            '''),
-            re.escape(
-                'Invalid `project.license` value in pyproject.toml, '
-                'expecting either `file` or `text` (got `{}`)'
-            ),
-        ),
-        (
-            textwrap.dedent('''
-                [project]
-                name = 'test'
-                license = { file = '...', text = '...' }
-            '''),
-            re.escape(
-                'Invalid `project.license` value in pyproject.toml, '
-                "expecting either `file` or `text` (got `{'file': '...', 'text': '...'}`)"
-            ),
-        ),
-        (
-            textwrap.dedent('''
-                [project]
-                name = 'test'
-                license = { made-up = ':(' }
-            '''),
-            re.escape(
-                'Unexpected field `project.license.made-up`'
-            ),
-        ),
-        (
-            textwrap.dedent('''
-                [project]
-                name = 'test'
-                license = { file = true }
-            '''),
-            re.escape('Field `project.license.file` has an invalid type, expecting a string (got `True`)'),
-        ),
-        (
-            textwrap.dedent('''
-                [project]
-                name = 'test'
-                license = { text = true }
-            '''),
-            re.escape('Field `project.license.text` has an invalid type, expecting a string (got `True`)'),
-        ),
-        (
-            textwrap.dedent('''
-                [project]
-                name = 'test'
-                license = { file = 'this-file-does-not-exist' }
-            '''),
-            re.escape('License file not found (`this-file-does-not-exist`)'),
-        ),
-        # readme
-        (
-            textwrap.dedent('''
-                [project]
-                name = 'test'
-                readme = {}
-            '''),
-            re.escape(
-                'Invalid `project.readme` value in pyproject.toml, '
-                'expecting either `file` or `text` (got `{}`)'
-            ),
-        ),
-        (
-            textwrap.dedent('''
-                [project]
-                name = 'test'
-                readme = { file = '...', text = '...' }
-            '''),
-            re.escape(
-                'Invalid `project.readme` value in pyproject.toml, '
-                "expecting either `file` or `text` (got `{'file': '...', 'text': '...'}`)"
-            ),
-        ),
-        (
-            textwrap.dedent('''
-                [project]
-                name = 'test'
-                readme = { made-up = ':(' }
-            '''),
-            re.escape(
-                'Unexpected field `project.readme.made-up`'
-            ),
-        ),
-        (
-            textwrap.dedent('''
-                [project]
-                name = 'test'
-                readme = { file = true }
-            '''),
-            re.escape('Field `project.readme.file` has an invalid type, expecting a string (got `True`)'),
-        ),
-        (
-            textwrap.dedent('''
-                [project]
-                name = 'test'
-                readme = { text = true }
-            '''),
-            re.escape('Field `project.readme.text` has an invalid type, expecting a string (got `True`)'),
-        ),
-        (
-            textwrap.dedent('''
-                [project]
-                name = 'test'
-                readme = { file = 'this-file-does-not-exist' }
-            '''),
-            re.escape('Readme file not found (`this-file-does-not-exist`)'),
-        ),
-        (
-            textwrap.dedent('''
-                [project]
-                name = 'test'
-                readme = { file = 'README.md' }
-            '''),
-            re.escape('Missing field `project.readme.content-type`'),
-        ),
-        # description
-        (
-            textwrap.dedent('''
-                [project]
-                name = 'test'
-                description = true
-            '''),
-            re.escape('Field `project.description` has an invalid type, expecting a string (got `True`)'),
-        ),
-        # dependencies
-        (
-            textwrap.dedent('''
-                [project]
-                name = 'test'
-                dependencies = 'some string!'
-            '''),
-            re.escape('Field `project.dependencies` has an invalid type, expecting a list of strings (got `some string!`)'),
-        ),
-        (
-            textwrap.dedent('''
-                [project]
-                name = 'test'
-                dependencies = [
-                    99,
-                ]
-            '''),
-            re.escape('Field `project.dependencies` contains item with invalid type, expecting a string (got `99`)'),
-        ),
-        # optional-dependencies
-        (
-            textwrap.dedent('''
-                [project]
-                name = 'test'
-                optional-dependencies = true
-            '''),
-            re.escape(
-                'Field `project.optional-dependencies` has an invalid type, '
-                'expecting a dictionary of PEP 508 requirement strings (got `True`)'
-            ),
-        ),
-        (
-            textwrap.dedent('''
-                [project]
-                name = 'test'
-                [project.optional-dependencies]
-                test = 'some string!'
-            '''),
-            re.escape(
-                'Field `project.optional-dependencies.test` has an invalid type, '
-                'expecting a dictionary PEP 508 requirement strings (got `some string!`)'
-            ),
-        ),
-        (
-            textwrap.dedent('''
-                [project]
-                name = 'test'
-                [project.optional-dependencies]
-                test = [
-                    true,
-                ]
-            '''),
-            re.escape(
-                'Field `project.optional-dependencies.test` has an invalid type, '
-                'expecting a PEP 508 requirement string (got `True`)'
-            ),
-        ),
-        (
-            textwrap.dedent('''
-                [project]
-                name = 'test'
-                [project.optional-dependencies]
-                test = [
-                    'definitely not a valid PEP 508 requirement!',
-                ]
-            '''),
-            re.escape(
-                'Field `project.optional-dependencies.test` contains an invalid '
-                'PEP 508 requirement string `definitely not a valid PEP 508 requirement!` '
-                '(`Parse error at "\'not a va\'": Expected stringEnd`)'
-            ),
-        ),
-        # requires-python
-        (
-            textwrap.dedent('''
-                [project]
-                name = 'test'
-                requires-python = true
-            '''),
-            re.escape('Field `project.requires-python` has an invalid type, expecting a string (got `True`)'),
-        ),
-        # keywords
-        (
-            textwrap.dedent('''
-                [project]
-                name = 'test'
-                keywords = 'some string!'
-            '''),
-            re.escape('Field `project.keywords` has an invalid type, expecting a list of strings (got `some string!`)'),
-        ),
-        (
-            textwrap.dedent('''
-                [project]
-                name = 'test'
-                keywords = [
-                    true,
-                ]
-            '''),
-            re.escape('Field `project.keywords` contains item with invalid type, expecting a string (got `True`)'),
-        ),
-        # authors
-        (
-            textwrap.dedent('''
-                [project]
-                name = 'test'
-                authors = {}
-            '''),
-            re.escape(
-                'Field `project.authors` has an invalid type, expecting a list of '
-                'dictionaries containing the `name` and/or `email` keys (got `{}`)'
-            ),
-        ),
-        (
-            textwrap.dedent('''
-                [project]
-                name = 'test'
-                authors = [
-                    true,
-                ]
-            '''),
-            re.escape(
-                'Field `project.authors` has an invalid type, expecting a list of '
-                'dictionaries containing the `name` and/or `email` keys (got `[True]`)'
-            ),
-        ),
-        # maintainers
-        (
-            textwrap.dedent('''
-                [project]
-                name = 'test'
-                maintainers = {}
-            '''),
-            re.escape(
-                'Field `project.maintainers` has an invalid type, expecting a list of '
-                'dictionaries containing the `name` and/or `email` keys (got `{}`)'
-            ),
-        ),
-        (
-            textwrap.dedent('''
-                [project]
-                name = 'test'
-                maintainers = [
-                    10
-                ]
-            '''),
-            re.escape(
-                'Field `project.maintainers` has an invalid type, expecting a list of '
-                'dictionaries containing the `name` and/or `email` keys (got `[10]`)'
-            ),
-        ),
-        # classifiers
-        (
-            textwrap.dedent('''
-                [project]
-                name = 'test'
-                classifiers = 'some string!'
-            '''),
-            re.escape('Field `project.classifiers` has an invalid type, expecting a list of strings (got `some string!`)'),
-        ),
-        (
-            textwrap.dedent('''
-                [project]
-                name = 'test'
-                classifiers = [
-                    true,
-                ]
-            '''),
-            re.escape('Field `project.classifiers` contains item with invalid type, expecting a string (got `True`)'),
-        ),
-        # homepage
-        (
-            textwrap.dedent('''
-                [project]
-                name = 'test'
-                [project.urls]
-                homepage = true
-            '''),
-            re.escape('Field `project.urls.homepage` has an invalid type, expecting a string (got `True`)'),
-        ),
-        # documentation
-        (
-            textwrap.dedent('''
-                [project]
-                name = 'test'
-                [project.urls]
-                documentation = true
-            '''),
-            re.escape('Field `project.urls.documentation` has an invalid type, expecting a string (got `True`)'),
-        ),
-        # repository
-        (
-            textwrap.dedent('''
-                [project]
-                name = 'test'
-                [project.urls]
-                repository = true
-            '''),
-            re.escape('Field `project.urls.repository` has an invalid type, expecting a string (got `True`)'),
-        ),
-        # changelog
-        (
-            textwrap.dedent('''
-                [project]
-                name = 'test'
-                [project.urls]
-                changelog = true
-            '''),
-            re.escape('Field `project.urls.changelog` has an invalid type, expecting a string (got `True`)'),
-        ),
-        # scripts
-        (
-            textwrap.dedent('''
-                [project]
-                name = 'test'
-                scripts = []
-            '''),
-            re.escape('Field `project.scripts` has an invalid type, expecting a dictionary of strings (got `[]`)'),
-        ),
-        # gui-scripts
-        (
-            textwrap.dedent('''
-                [project]
-                name = 'test'
-                gui-scripts = []
-            '''),
-            re.escape('Field `project.gui-scripts` has an invalid type, expecting a dictionary of strings (got `[]`)'),
-        ),
-        # entry-points
-        (
-            textwrap.dedent('''
-                [project]
-                name = 'test'
-                entry-points = []
-            '''),
-            re.escape(
-                'Field `project.entry-points` has an invalid type, '
-                'expecting a dictionary of entrypoint sections (got `[]`)'
-            ),
-        ),
-        (
-            textwrap.dedent('''
-                [project]
-                name = 'test'
-                entry-points = { section = 'something' }
-            '''),
-            re.escape(
-                'Field `project.entry-points.section` has an invalid type, '
-                'expecting a dictionary of entrypoints (got `something`)'
-            ),
-        ),
-        (
-            textwrap.dedent('''
-                [project]
-                name = 'test'
-                [project.entry-points.section]
-                entrypoint = []
-            '''),
-            re.escape('Field `project.entry-points.section.entrypoint` has an invalid type, expecting a string (got `[]`)'),
-        ),
-    ]
-)
-def test_validate(package_full_metadata, data, error):
-    with pytest.raises(trampolim.ConfigurationError, match=error):
-        trampolim._build.Project(_toml=data)
+    ):
+        trampolim._build.Project(_toml='''
+            [project]
+            name = 'test'
+        ''')
 
 
 def test_full_metadata(package_full_metadata):
     p = trampolim._build.Project()
     assert p.name == 'full-metadata'
-    assert p.version == '3.2.1'
+    assert str(p.version) == '3.2.1'
     assert p.description == 'A package with all the metadata :)'
     assert p.license_text == 'some license text'
     assert p.keywords == ['trampolim', 'is', 'interesting']
@@ -459,10 +58,10 @@ def test_full_metadata(package_full_metadata):
         'Development Status :: 4 - Beta',
         'Programming Language :: Python'
     ]
-    assert p.homepage == 'example.com'
-    assert p.documentation == 'readthedocs.org'
-    assert p.repository == 'github.com/some/repo'
-    assert p.changelog == 'github.com/some/repo/blob/master/CHANGELOG.rst'
+    assert p.urls['homepage'] == 'example.com'
+    assert p.urls['documentation'] == 'readthedocs.org'
+    assert p.urls['repository'] == 'github.com/some/repo'
+    assert p.urls['changelog'] == 'github.com/some/repo/blob/master/CHANGELOG.rst'
     assert p.scripts == {
         'full-metadata': 'full_metadata:main_cli',
     }
@@ -495,6 +94,7 @@ def test_rfc822_metadata(package_full_metadata):
         Maintainer-Email: Other Example <other@example.com>
         Classifier: Development Status :: 4 - Beta
         Classifier: Programming Language :: Python
+        Project-URL: Homepage, example.com
         Project-URL: Documentation, readthedocs.org
         Project-URL: Repository, github.com/some/repo
         Project-URL: Changelog, github.com/some/repo/blob/master/CHANGELOG.rst
@@ -605,25 +205,25 @@ def test_license_text_from_file(package_license_file):
 
 
 def test_version(package_sample_source):
-    assert trampolim._build.Project().version == '0.0.0'
+    assert trampolim._build.Project().version == packaging.version.Version('0.0.0')
 
 
 def test_vcs_version_envvar(package_vcs_version1):
     os.environ['TRAMPOLIM_VCS_VERSION'] = '1.2.3'
-    assert trampolim._build.Project().version == '1.2.3'
+    assert str(trampolim._build.Project().version) == '1.2.3'
     os.environ.pop('TRAMPOLIM_VCS_VERSION')
 
 
 def test_vcs_version_git_archive_tag_alone(package_vcs_version1):
-    assert trampolim._build.Project().version == '0.0.1'
+    assert str(trampolim._build.Project().version) == '0.0.1'
 
 
 def test_vcs_version_git_archive_many_refs_tag(package_vcs_version2):
-    assert trampolim._build.Project().version == '0.0.2'
+    assert str(trampolim._build.Project().version) == '0.0.2'
 
 
 def test_vcs_version_git_archive_commit(package_vcs_version3):
-    assert trampolim._build.Project().version == 'this-is-a-commit'
+    assert str(trampolim._build.Project().version) == '0.dev0+this.is.a.commit'
 
 
 def test_vcs_version_git_archive_unpopulated(mocker, package_vcs_version_unpopulated):
@@ -640,7 +240,7 @@ def test_vcs_git_repo(mocker, package_no_version):
         'subprocess.check_output',
         side_effect=[b'1.0.0-23-gea1f213'],
     )
-    assert trampolim._build.Project().version == '1.0.0.23.gea1f213'
+    assert str(trampolim._build.Project().version) == '1.0.0.23+gea1f213'
 
 
 def test_vcs_no_version(mocker, package_no_version):

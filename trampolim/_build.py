@@ -6,18 +6,20 @@ import gzip
 import io
 import os
 import os.path
-import re
 import subprocess
 import sys
 import tarfile
 import typing
 import warnings
 
-from typing import IO, Dict, List, Optional, Sequence, Tuple, Union
+from typing import IO, Dict, List, Mapping, Optional, Sequence, Tuple, Union
 
 import packaging.markers
 import packaging.requirements
+import packaging.version
 import toml
+
+import trampolim._metadata
 
 
 if sys.version_info < (3, 8):
@@ -35,6 +37,13 @@ class TrampolimError(Exception):
 
 class ConfigurationError(TrampolimError):
     '''Error in the backend configuration.'''
+    def __init__(self, msg: str, *, key: Optional[str] = None):
+        super().__init__(msg)
+        self._key = key
+
+    @property
+    def key(self) -> Optional[str]:  # pragma: no cover
+        return self._key
 
 
 class TrampolimWarning(Warning):
@@ -42,17 +51,6 @@ class TrampolimWarning(Warning):
 
 
 class Project():
-    _VALID_KEYS = {
-        'project.license': [
-            'file',
-            'text',
-        ],
-        'project.readme': [
-            'content-type',
-            'file',
-            'text',
-        ]
-    }
     _VALID_DYNAMIC = [
         'version',
     ]
@@ -64,18 +62,11 @@ class Project():
             with open('pyproject.toml') as f:
                 self._pyproject = toml.load(f)
 
-        if 'project' not in self._pyproject:
-            raise ConfigurationError('Missing section `project` in pyproject.toml')
+        self._stdmeta = trampolim._metadata.StandardMetadata(self._pyproject)
 
-        self._project = self._pyproject['project']
-
-        dynamic = self._pget_list('project.dynamic')
-        self._dynamic = dynamic if dynamic else []
-        for field in self._dynamic:
+        for field in self._stdmeta.dynamic:
             if field not in self._VALID_DYNAMIC:
-                raise ConfigurationError(f'Unsupported field in `project.dynamic`: `project.{field}`')
-
-        self._validate_pyproject()
+                raise ConfigurationError(f'Unsupported field `{field}` in `project.dynamic`')
 
         self.version  # calculate version
 
@@ -86,62 +77,6 @@ class Project():
                     f'Top-level module `{module}` selected, are you sure you want to install it??',
                     TrampolimWarning,
                 )
-
-    def _validate_pyproject(self) -> None:
-        '''Validate the project table.'''
-        if 'name' not in self._project:
-            raise ConfigurationError('Field `project.name` missing pyproject.toml')
-
-        # license
-        if 'license' in self._project:
-            license = self._pget_dict('project.license')
-            if (
-                ('file' not in license and 'text' not in license) or
-                ('file' in license and 'text' in license)
-            ):
-                raise ConfigurationError(
-                    'Invalid `project.license` value in pyproject.toml, '
-                    f'expecting either `file` or `text` (got `{license}`)'
-                )
-            if self.license_file and not os.path.isfile(self.license_file):
-                raise ConfigurationError(f'License file not found (`{self.license_file}`)')
-
-        # readme
-        if 'readme' in self._project and not isinstance(self._project['readme'], str):
-            readme = self._pget_dict('project.readme')
-            if (
-                ('file' not in readme and 'text' not in readme) or
-                ('file' in readme and 'text' in readme)
-            ):
-                raise ConfigurationError(
-                    'Invalid `project.readme` value in pyproject.toml, '
-                    f'expecting either `file` or `text` (got `{readme}`)'
-                )
-        if self.readme_file and not os.path.isfile(self.readme_file):
-            raise ConfigurationError(f'Readme file not found (`{self.readme_file}`)')
-
-        # try to fetch the fields to run validation -- we do validation on the getters because mypy
-        self.name
-        self.description
-        self.dependencies
-        self.optional_dependencies
-        self.requires_python
-        self.keywords
-        self.license_file
-        self.license_text
-        self.readme_file
-        self.readme_text
-        self.readme_content_type
-        self.authors
-        self.maintainers
-        self.classifiers
-        self.homepage
-        self.documentation
-        self.repository
-        self.changelog
-        self.scripts
-        self.gui_scripts
-        self.entrypoints
 
     @property
     def source(self) -> List[str]:
@@ -174,30 +109,26 @@ class Project():
             return [name]
         raise TrampolimError(f'Could not find the top-level module(s) (looking for `{name}`)')
 
-    @cached_property
+    @property
     def name(self) -> str:
         '''Project name.'''
-        name = self._pget_str('project.name')
-        assert name
-        return re.sub(r'[-_.]+', '-', name).lower()
+        return self._stdmeta.name
 
     @cached_property
-    def version(self) -> str:  # noqa: C901
+    def version(self) -> packaging.version.Version:  # noqa: C901
         '''Project version.'''
 
-        if 'version' in self._project:
-            version = self._project['version']
-            assert isinstance(version, str)
-            return version
+        if self._stdmeta.version:
+            return self._stdmeta.version
 
-        if 'version' not in self._dynamic:
+        if 'version' not in self._stdmeta.dynamic:
             raise ConfigurationError(
                 'Missing required field `project.version` (if you want to infer the project version '
                 'automatically, `version` needs to be added to the `project.dynamic` list field)'
             )
 
         if 'TRAMPOLIM_VCS_VERSION' in os.environ:
-            return os.environ['TRAMPOLIM_VCS_VERSION']
+            return packaging.version.Version(os.environ['TRAMPOLIM_VCS_VERSION'])
 
         # from git archive
         # http://git-scm.com/book/en/v2/Customizing-Git-Git-Attributes
@@ -213,17 +144,18 @@ class Project():
                         continue
                     if name == 'tag' and '$' not in value:
                         assert isinstance(value, str)
-                        return value.strip(' v')
+                        return packaging.version.Version(value.strip(' v'))
             if 'commit' in data and '$' not in data['commit']:
                 assert isinstance(data['commit'], str)
-                return data['commit']
+                return packaging.version.Version(f'0.dev0+{data["commit"]}')
 
         # from git repo
         try:
-            return subprocess.check_output([
+            tag, r, commit = subprocess.check_output([
                 'git', 'describe', '--tags'
-            ]).decode().strip(' v').replace('-', '.')
-        except (FileNotFoundError, subprocess.CalledProcessError):
+            ]).decode().strip(' v').split('-')
+            return packaging.version.Version(f'{tag}.{r}+{commit}')
+        except (FileNotFoundError, subprocess.CalledProcessError, TypeError):
             pass
 
         raise TrampolimError(
@@ -247,267 +179,90 @@ class Project():
     def platform_tag(self) -> str:
         return 'any'
 
-    def _pget_str(self, key: str) -> Optional[str]:
-        try:
-            val = self._pyproject
-            for part in key.split('.'):
-                val = val[part]
-            if not isinstance(val, str):
-                raise ConfigurationError(
-                    f'Field `{key}` has an invalid type, '
-                    f'expecting a string (got `{val}`)'
-                )
-            return val
-        except KeyError:
-            return None
-
-    def _pget_list(self, key: str) -> List[str]:
-        try:
-            val = self._pyproject
-            for part in key.split('.'):
-                val = val[part]
-            if not isinstance(val, list):
-                raise ConfigurationError(
-                    f'Field `{key}` has an invalid type, '
-                    f'expecting a list of strings (got `{val}`)'
-                )
-            for item in val:
-                if not isinstance(item, str):
-                    raise ConfigurationError(
-                        f'Field `{key}` contains item with invalid type, '
-                        f'expecting a string (got `{item}`)'
-                    )
-            return val
-        except KeyError:
-            return []
-
-    def _pget_dict(self, key: str) -> Dict[str, str]:
-        try:
-            val = self._pyproject
-            for part in key.split('.'):
-                val = val[part]
-            if not isinstance(val, dict):
-                raise ConfigurationError(
-                    f'Field `{key}` has an invalid type, '
-                    f'expecting a dictionary of strings (got `{val}`)'
-                )
-            valid_keys = self._VALID_KEYS.get(key)
-            for subkey, item in val.items():
-                if valid_keys and subkey not in valid_keys:
-                    raise ConfigurationError(f'Unexpected field `{key}.{subkey}`')
-                if not isinstance(item, str):
-                    raise ConfigurationError(
-                        f'Field `{key}.{subkey}` has an invalid type, '
-                        f'expecting a string (got `{item}`)'
-                    )
-            return val
-        except KeyError:
-            return {}
-
-    def _pget_people(self, key: str) -> List[Tuple[str, str]]:
-        try:
-            val = self._pyproject
-            for part in key.split('.'):
-                val = val[part]
-            if not (
-                isinstance(val, list)
-                and all(isinstance(x, dict) for x in val)
-                and all(
-                    isinstance(item, str)
-                    for items in [_dict.values() for _dict in val]
-                    for item in items
-                )
-            ):
-                raise ConfigurationError(
-                    f'Field `{key}` has an invalid type, expecting a list of '
-                    f'dictionaries containing the `name` and/or `email` keys (got `{val}`)'
-                )
-            return [
-                (entry.get('name', 'Unknown'), entry.get('email'))
-                for entry in val
-            ]
-        except KeyError:
-            return []
-
-    @cached_property
+    @property
     def description(self) -> Optional[str]:
         '''Project description.'''
-        return self._pget_str('project.description')
+        return self._stdmeta.description
 
-    @cached_property
+    @property
     def dependencies(self) -> List[str]:
         '''Project dependencies.'''
-        return self._pget_list('project.dependencies')
+        return self._stdmeta.dependencies
 
-    @cached_property
+    @property
     def optional_dependencies(self) -> Dict[str, List[str]]:
         '''Project optional dependencies.'''
-        try:
-            val = self._project['optional-dependencies']
-            if not isinstance(val, dict):
-                raise ConfigurationError(
-                    'Field `project.optional-dependencies` has an invalid type, expecting a '
-                    f'dictionary of PEP 508 requirement strings (got `{val}`)'
-                )
-            for extra, requirements in val.items():
-                assert isinstance(extra, str)
-                if not isinstance(requirements, list):
-                    raise ConfigurationError(
-                        f'Field `project.optional-dependencies.{extra}` has an invalid type, expecting a '
-                        f'dictionary PEP 508 requirement strings (got `{requirements}`)'
-                    )
-                for req in requirements:
-                    if not isinstance(req, str):
-                        raise ConfigurationError(
-                            f'Field `project.optional-dependencies.{extra}` has an invalid type, '
-                            f'expecting a PEP 508 requirement string (got `{req}`)'
-                        )
-                    try:
-                        packaging.requirements.Requirement(req)
-                    except packaging.requirements.InvalidRequirement as e:
-                        raise ConfigurationError(
-                            f'Field `project.optional-dependencies.{extra}` contains '
-                            f'an invalid PEP 508 requirement string `{req}` (`{str(e)}`)'
-                        )
-            return val
-        except KeyError:
-            return {}
+        return self._stdmeta.optional_dependencies
 
-    @cached_property
-    def requires_python(self) -> Optional[str]:
+    @property
+    def requires_python(self) -> Optional[packaging.specifiers.Specifier]:
         '''Project Python requirements.'''
-        return self._pget_str('project.requires-python')
+        return self._stdmeta.requires_python
 
-    @cached_property
+    @property
     def keywords(self) -> List[str]:
         '''Project keywords.'''
-        return self._pget_list('project.keywords')
+        return self._stdmeta.keywords
 
-    @cached_property
+    @property
     def license_file(self) -> Optional[str]:
         '''Project license file (if any).'''
-        return self._pget_str('project.license.file')
+        return self._stdmeta.license_file
 
-    @cached_property
+    @property
     def license_text(self) -> Optional[str]:
         '''Project license text.'''
-        if self.license_file:
-            with open(self.license_file) as f:
-                return f.read()
-        else:
-            val = self._pget_str('project.license.text')
-            if val and '\n' in val:  # pragma: no cover
-                raise ConfigurationError('Newlines are not supported in the `project.license.text` field')
-            return val
+        return self._stdmeta.license_text
 
-    @cached_property
+    @property
     def readme_file(self) -> Optional[str]:
         '''Project readme file (if any).'''
-        if 'readme' not in self._project:
-            return None
-        val = self._project['readme']
-        if isinstance(val, str):
-            return val
-        return self._pget_dict('project.readme').get('file')
+        return self._stdmeta.readme_file
 
-    @cached_property
+    @property
     def readme_text(self) -> Optional[str]:
         '''Project readme text.'''
-        if self.readme_file:
-            with open(self.readme_file) as f:
-                return f.read()
-        else:
-            return self._pget_str('project.readme.text')
+        return self._stdmeta.readme_text
 
-    @cached_property
+    @property
     def readme_content_type(self) -> Optional[str]:
         '''Project readme content type.'''
-        if 'readme' not in self._project:
-            return None
-        if isinstance(self._project['readme'], str):
-            assert self.readme_file
-            if self.readme_file.endswith('.md'):
-                return 'text/markdown'
-            if self.readme_file.endswith('.rst'):
-                return 'text/x-rst'
-            raise TrampolimError(f'Could not infer content type for readme file `{self.readme_file}`')
-        val = self._pget_dict('project.readme')
-        if 'content-type' not in val:
-            raise ConfigurationError('Missing field `project.readme.content-type`')
-        return val['content-type']
+        return self._stdmeta.readme_content_type
 
-    @cached_property
+    @property
     def authors(self) -> List[Tuple[str, str]]:
         '''Project authors.'''
-        return self._pget_people('project.authors')
+        return self._stdmeta.authors
 
-    @cached_property
+    @property
     def maintainers(self) -> List[Tuple[str, str]]:
         '''Project maintainers.'''
-        return self._pget_people('project.maintainers')
+        return self._stdmeta.maintainers or self._stdmeta.authors
 
-    @cached_property
+    @property
     def classifiers(self) -> List[str]:
         '''Project trove classifiers.'''
-        return self._pget_list('project.classifiers')
+        return self._stdmeta.classifiers
 
-    @cached_property
-    def homepage(self) -> Optional[str]:
+    @property
+    def urls(self) -> Mapping[str, str]:
         '''Project homepage.'''
-        return self._pget_str('project.urls.homepage')
+        return self._stdmeta.urls
 
-    @cached_property
-    def documentation(self) -> Optional[str]:
-        '''Project documentation.'''
-        return self._pget_str('project.urls.documentation')
-
-    @cached_property
-    def repository(self) -> Optional[str]:
-        '''Project repository.'''
-        return self._pget_str('project.urls.repository')
-
-    @cached_property
-    def changelog(self) -> Optional[str]:
-        '''Project repository.'''
-        return self._pget_str('project.urls.changelog')
-
-    @cached_property
+    @property
     def scripts(self) -> Dict[str, str]:
         '''Project console script entrypoints.'''
-        return self._pget_dict('project.scripts')
+        return self._stdmeta.scripts
 
-    @cached_property
+    @property
     def gui_scripts(self) -> Dict[str, str]:
         '''Project GUI script entrypoints.'''
-        return self._pget_dict('project.gui-scripts')
+        return self._stdmeta.gui_scripts
 
-    @cached_property
+    @property
     def entrypoints(self) -> Dict[str, Dict[str, str]]:
         '''Project extra entrypoints.'''
-        try:
-            val = self._project['entry-points']
-            if not isinstance(val, dict):
-                raise ConfigurationError(
-                    'Field `project.entry-points` has an invalid type, expecting a '
-                    f'dictionary of entrypoint sections (got `{val}`)'
-                )
-            for section, entrypoints in val.items():
-                assert isinstance(section, str)
-                if not isinstance(entrypoints, dict):
-                    raise ConfigurationError(
-                        f'Field `project.entry-points.{section}` has an invalid type, expecting a '
-                        f'dictionary of entrypoints (got `{entrypoints}`)'
-                    )
-                for name, entrypoint in entrypoints.items():
-                    assert isinstance(name, str)
-                    if not isinstance(entrypoint, str):
-                        raise ConfigurationError(
-                            f'Field `project.entry-points.{section}.{name}` has an invalid type, '
-                            f'expecting a string (got `{entrypoint}`)'
-                        )
-            return val
-        except KeyError:
-            return {}
+        return self._stdmeta.entrypoints
 
     def _person_list(self, people: List[Tuple[str, str]]) -> str:
         return ', '.join([
@@ -524,12 +279,13 @@ class Project():
         metadata = RFC822Message()
         metadata['Metadata-Version'] = '2.2'
         metadata['Name'] = self.name
-        metadata['Version'] = self.version
+        metadata['Version'] = str(self.version)
         # skip 'Platform' -- we currently only support pure
         # skip 'Supported-Platform' -- we currently only support pure
         metadata['Summary'] = self.description
         metadata['Keywords'] = ' '.join(self.keywords)
-        metadata['Home-page'] = self.homepage
+        if 'homepage' in self.urls:
+            metadata['Home-page'] = self.urls['homepage']
         # skip 'Download-URL'
         metadata['Author'] = metadata['Author-Email'] = self._person_list(self.authors)
         if self.maintainers != self.authors:
@@ -540,14 +296,10 @@ class Project():
         # skip 'Provides-Dist'
         # skip 'Obsoletes-Dist'
         # skip 'Requires-External'
-        if self.documentation:
-            metadata['Project-URL'] = f'Documentation, {self.documentation}'
-        if self.repository:
-            metadata['Project-URL'] = f'Repository, {self.repository}'
-        if self.changelog:
-            metadata['Project-URL'] = f'Changelog, {self.changelog}'
+        for name, url in self.urls.items():
+            metadata['Project-URL'] = f'{name.capitalize()}, {url}'
         if self.requires_python:
-            metadata['Requires-Python'] = self.requires_python
+            metadata['Requires-Python'] = str(self.requires_python)
         for dep in self.dependencies:
             metadata['Requires-Dist'] = dep
         for extra, requirements in self.optional_dependencies.items():
