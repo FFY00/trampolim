@@ -75,7 +75,7 @@ class Project():
             if field not in self._VALID_DYNAMIC:
                 raise ConfigurationError(f'Unsupported field in `project.dynamic`: `project.{field}`')
 
-        self._validate()
+        self._validate_pyproject()
 
         self.version  # calculate version
 
@@ -87,7 +87,7 @@ class Project():
                     TrampolimWarning,
                 )
 
-    def _validate(self) -> None:
+    def _validate_pyproject(self) -> None:
         '''Validate the project table.'''
         if 'name' not in self._project:
             raise ConfigurationError('Field `project.name` missing pyproject.toml')
