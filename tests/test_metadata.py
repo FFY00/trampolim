@@ -48,6 +48,14 @@ import trampolim._metadata
             textwrap.dedent('''
                 [project]
                 name = 'test'
+                license = true
+            '''),
+            ('Field `project.license` has an invalid type, expecting a dictionary of strings (got `True`)'),
+        ),
+        (
+            textwrap.dedent('''
+                [project]
+                name = 'test'
                 license = {}
             '''),
             ('Invalid `project.license` value, expecting either `file` or `text` (got `{}`)'),
