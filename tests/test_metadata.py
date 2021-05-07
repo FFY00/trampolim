@@ -38,11 +38,10 @@ import trampolim._metadata
         (
             textwrap.dedent('''
                 [project]
-                dynamic = [
-                    'name',
-                ]
+                name = 'test'
+                version = true
             '''),
-            ('Unsupported field `name` in `project.dynamic`'),
+            ('Field `project.version` has an invalid type, expecting a string (got `True`)'),
         ),
         # license
         (
