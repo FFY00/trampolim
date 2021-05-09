@@ -461,3 +461,20 @@ import trampolim._metadata
 def test_standard_metadata(package_full_metadata, data, error):
     with pytest.raises(trampolim.ConfigurationError, match=re.escape(error)):
         trampolim._metadata.StandardMetadata(toml.loads(data))
+
+
+@pytest.mark.parametrize(
+    ('data', 'error'),
+    [
+        (
+            textwrap.dedent('''
+                [tool.trampolim]
+                top-level-modules = true
+            '''),
+            ('Field `tool.trampolim.top-level-modules` has an invalid type, expecting a list of strings (got `True`)'),
+        ),
+    ],
+)
+def test_trampolim_metadata(package_full_metadata, data, error):
+    with pytest.raises(trampolim.ConfigurationError, match=re.escape(error)):
+        trampolim._metadata.TrampolimMetadata(toml.loads(data))

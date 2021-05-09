@@ -63,6 +63,7 @@ class Project():
                 self._pyproject = toml.load(f)
 
         self._stdmeta = trampolim._metadata.StandardMetadata(self._pyproject)
+        self._trampolim_meta = trampolim._metadata.TrampolimMetadata(self._pyproject)
 
         for field in self._stdmeta.dynamic:
             if field not in self._VALID_DYNAMIC:
@@ -101,6 +102,9 @@ class Project():
         By default will look for the normalized name of the project name
         replacing `-` with `_`.
         '''
+        if 'top-level-modules' in self._trampolim_meta:
+            return self._trampolim_meta.top_level_modules
+
         name = self.name.replace('-', '_')
         files = os.listdir()
         if f'{name}.py' in files:  # file module

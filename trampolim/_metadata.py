@@ -17,6 +17,17 @@ class Metadata():
     def __init__(self, data: Mapping[str, Any]) -> None:
         self._data = data
 
+    def __contains__(self, key: Any) -> bool:
+        if not isinstance(key, str):  # pragma: no cover
+            return False
+        try:
+            val = self._data['tool']['trampolim']
+            for part in key.split('.'):
+                val = val[part]
+            return True
+        except KeyError:
+            return False
+
     def _get(self, key: str) -> Any:
         val = self._data
         for part in key.split('.'):
@@ -288,3 +299,9 @@ class StandardMetadata(Metadata):
             return val
         except KeyError:
             return {}
+
+
+class TrampolimMetadata(Metadata):
+    def __init__(self, data: Mapping[str, Any]) -> None:
+        super().__init__(data)
+        self.top_level_modules = self._get_list('tool.trampolim.top-level-modules')

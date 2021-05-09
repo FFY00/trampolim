@@ -250,3 +250,11 @@ def test_vcs_no_version(mocker, package_no_version):
         'TRAMPOLIM_VCS_VERSION environment variable to manually override the version)'
     )):
         trampolim._build.Project()
+
+
+def test_vcs_custom_top_modules(mocker, package_custom_top_modules):
+    assert trampolim._build.Project().root_modules == [
+        'module1',
+        'module2',
+        'module3',
+    ]

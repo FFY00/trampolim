@@ -1,0 +1,14 @@
+[build-system]
+build-backend = 'trampolim'
+requires = ['trampolim']
+
+[project]
+name = 'custom-top-modules'
+version = '0.0.0'
+
+[tool.trampolim]
+top-level-modules = [
+    'module1',
+    'module2',
+    'module3',
+]
