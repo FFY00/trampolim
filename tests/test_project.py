@@ -258,3 +258,10 @@ def test_vcs_custom_top_modules(mocker, package_custom_top_modules):
         'module2',
         'module3',
     ]
+
+
+def test_vcs_test_top_module(mocker, package_test_top_level_module):
+    with pytest.warns(trampolim.TrampolimWarning, match=re.escape(
+        'Top-level module `test` selected, are you sure you want to install it??'
+    )):
+        trampolim._build.Project()

@@ -1,0 +1,12 @@
+[build-system]
+build-backend = 'trampolim'
+requires = ['trampolim']
+
+[project]
+name = 'test-top-level-module'
+version = '0.0.0'
+
+[tool.trampolim]
+top-level-modules = [
+    'test',
+]
