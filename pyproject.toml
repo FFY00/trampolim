@@ -53,6 +53,6 @@ trampolim = 'trampolim.__main__:entrypoint'
 
 [project.urls]
 homepage = 'https://github.com/FFY00/trampolim'
-documentation = 'https://github.com/FFY00/trampolim'
 repository = 'https://github.com/FFY00/trampolim'
+documentation = 'https://trampolim.readthedocs.io'
 changelog = 'https://trampolim.readthedocs.io/en/latest/changelog.html'
