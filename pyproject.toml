@@ -43,6 +43,9 @@ test = [
   'pytest-mock',
 ]
 
+[project.scripts]
+trampolim = 'trampolim.__main__:entrypoint'
+
 [project.urls]
 homepage = 'https://github.com/FFY00/trampolim'
 documentation = 'https://github.com/FFY00/trampolim'
