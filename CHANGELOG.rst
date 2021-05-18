@@ -3,6 +3,13 @@ Changelog
 +++++++++
 
 
+0.0.2 (18-05-2021)
+==================
+
+- Add cli with a build command
+- Add ``top-level-modules`` setting
+
+
 0.0.1 (06-05-2021)
 ==================
 
