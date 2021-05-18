@@ -42,6 +42,11 @@ test = [
   'pytest-cov',
   'pytest-mock',
 ]
+docs = [
+  'furo>=2021.04.11b34',
+  'sphinx~=3.0',
+  'sphinx-autodoc-typehints>=1.10',
+]
 
 [project.scripts]
 trampolim = 'trampolim.__main__:entrypoint'
