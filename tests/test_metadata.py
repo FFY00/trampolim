@@ -473,6 +473,13 @@ def test_standard_metadata(package_full_metadata, data, error):
             '''),
             ('Field `tool.trampolim.top-level-modules` has an invalid type, expecting a list of strings (got `True`)'),
         ),
+        (
+            textwrap.dedent('''
+                [tool.trampolim]
+                source-include = 0
+            '''),
+            ('Field `tool.trampolim.source-include` has an invalid type, expecting a list of strings (got `0`)'),
+        ),
     ],
 )
 def test_trampolim_metadata(package_full_metadata, data, error):

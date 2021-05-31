@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 
 import os
+import os.path
 import re
 import textwrap
 
@@ -265,3 +266,16 @@ def test_vcs_test_top_module(mocker, package_test_top_level_module):
         'Top-level module `test` selected, are you sure you want to install it??'
     )):
         trampolim._build.Project()
+
+
+def tests_source_include(package_source_include):
+    assert sorted(
+        '/'.join(path.split(os.path.sep))
+        for path in trampolim._build.Project().source
+    ) == [
+        'helper-data/a',
+        'helper-data/b',
+        'helper-data/c',
+        'some-config.txt',
+        'source_include.py',
+    ]

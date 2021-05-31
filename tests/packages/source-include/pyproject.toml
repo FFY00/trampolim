@@ -1,0 +1,15 @@
+[build-system]
+build-backend = 'trampolim'
+requires = ['trampolim']
+
+[project]
+name = 'source-include'
+version = '0.0.0'
+
+[tool.trampolim]
+source-include = [
+  'some-config.txt',
+  'helper-data/a',
+  'helper-data/b',
+  'helper-data/c',
+]

@@ -12,7 +12,7 @@ import tarfile
 import typing
 import warnings
 
-from typing import IO, Dict, List, Mapping, Optional, Sequence, Tuple, Union
+from typing import IO, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple, Union
 
 import packaging.markers
 import packaging.requirements
@@ -80,19 +80,25 @@ class Project():
                 )
 
     @property
-    def source(self) -> List[str]:
+    def source(self) -> Iterable[str]:
         '''Project source.'''
-        source = []
+        source = set()
 
         # TODO: ignore files not escaped as specified in PEP 427
         for module in self.root_modules:
             if module.endswith('.py'):  # file
-                source.append(module)
+                source.add(module)
             else:  # dir
-                source += [
+                source |= {
                     path for path in glob.glob(os.path.join(module, '**'), recursive=True)
                     if os.path.isfile(path) and not path.endswith('.pyc')
-                ]
+                }
+
+        source |= {
+            os.path.sep.join(path.split('/'))
+            for path in self._trampolim_meta.source_include
+        }
+
         return source
 
     @property

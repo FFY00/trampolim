@@ -77,3 +77,21 @@ def test_pkginfo(package_license_text, sdist_license_text):
     t = tarfile.open(sdist_license_text, 'r')
 
     assert t.extractfile('license-text-0.0.0/PKG-INFO').read() == p.metadata.as_bytes()
+
+
+def tests_source_include(package_source_include, sdist_source_include):
+    t = tarfile.open(sdist_source_include, 'r')
+
+    expected_source = [
+        'source-include-0.0.0/helper-data/a',
+        'source-include-0.0.0/helper-data/b',
+        'source-include-0.0.0/helper-data/c',
+        'source-include-0.0.0/some-config.txt',
+        'source-include-0.0.0/source_include.py',
+    ]
+
+    for file in expected_source:
+        with open(os.path.join(
+            *file[len('source-include-0.0.0/'):].split('/')
+        ), 'rb') as f:
+            assert f.read() == t.extractfile(file).read()

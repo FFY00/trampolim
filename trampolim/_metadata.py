@@ -305,3 +305,4 @@ class TrampolimMetadata(Metadata):
     def __init__(self, data: Mapping[str, Any]) -> None:
         super().__init__(data)
         self.top_level_modules = self._get_list('tool.trampolim.top-level-modules')
+        self.source_include = self._get_list('tool.trampolim.source-include')
