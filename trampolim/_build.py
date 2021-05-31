@@ -1,18 +1,21 @@
 # SPDX-License-Identifier: MIT
 
+import contextlib
 import email
 import glob
 import gzip
 import io
+import itertools
 import os
 import os.path
+import shutil
 import subprocess
 import sys
 import tarfile
 import typing
 import warnings
 
-from typing import IO, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple, Union
+from typing import IO, Dict, Iterable, Iterator, List, Mapping, Optional, Sequence, Tuple, Union
 
 import packaging.markers
 import packaging.requirements
@@ -78,6 +81,40 @@ class Project():
                     f'Top-level module `{module}` selected, are you sure you want to install it??',
                     TrampolimWarning,
                 )
+
+        # copy source to working directory
+        self._srcpath = os.path.join('.trampolim', 'source')
+        shutil.rmtree(self._srcpath, ignore_errors=True)
+        os.makedirs(self._srcpath)
+        for file in itertools.chain(self.source, self.build_system_source):
+            dirpath = os.path.dirname(file)
+            if dirpath:
+                destdirpath = os.path.join(self._srcpath, dirpath)
+                os.makedirs(destdirpath, exist_ok=True)
+                shutil.copystat(dirpath, destdirpath)
+            shutil.copy2(
+                file,
+                os.path.join(self._srcpath, file),
+                follow_symlinks=False,
+            )
+
+    @contextlib.contextmanager
+    def cd_source(self) -> Iterator[None]:
+        cwd = os.getcwd()
+        os.chdir(self._srcpath)
+
+        try:
+            yield
+        finally:
+            os.chdir(cwd)
+
+    @property
+    def build_system_source(self) -> Iterable[str]:
+        return iter(filter(None, [
+            'pyproject.toml',
+            self.license_file,
+            self.readme_file,
+        ]))
 
     @property
     def source(self) -> Iterable[str]:
@@ -367,26 +404,27 @@ class SdistBuilder():
             format=tarfile.PAX_FORMAT,  # changed in 3.8 to GNU
         )
 
-        # add pyproject.toml
-        tar.add('pyproject.toml', f'{self.name}/pyproject.toml')
+        with self._project.cd_source():
+            # add pyproject.toml
+            tar.add('pyproject.toml', f'{self.name}/pyproject.toml')
 
-        # add source
-        for source_path in self._project.source:
-            tar.add(source_path, f'{self.name}/{source_path}')
+            # add source
+            for source_path in self._project.source:
+                tar.add(source_path, f'{self.name}/{source_path}')
 
-        # add license
-        if self._project.license_file:
-            tar.add(self._project.license_file, f'{self.name}/{self._project.license_file}')
-        elif self._project.license_text:
-            license_raw = self._project.license_text.encode()
-            info = tarfile.TarInfo(f'{self.name}/LICENSE')
-            info.size = len(license_raw)
-            with io.BytesIO(license_raw) as data:
-                tar.addfile(info, data)
+            # add license
+            if self._project.license_file:
+                tar.add(self._project.license_file, f'{self.name}/{self._project.license_file}')
+            elif self._project.license_text:
+                license_raw = self._project.license_text.encode()
+                info = tarfile.TarInfo(f'{self.name}/LICENSE')
+                info.size = len(license_raw)
+                with io.BytesIO(license_raw) as data:
+                    tar.addfile(info, data)
 
-        # add readme
-        if self._project.readme_file:
-            tar.add(self._project.readme_file, f'{self.name}/{self._project.readme_file}')
+            # add readme
+            if self._project.readme_file:
+                tar.add(self._project.readme_file, f'{self.name}/{self._project.readme_file}')
 
         # PKG-INFO
         pkginfo = self._project.metadata.as_bytes()

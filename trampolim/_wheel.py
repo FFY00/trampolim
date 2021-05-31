@@ -28,15 +28,16 @@ class WheelBuilder():
 
     def build(self, path: trampolim._build.Path) -> None:
         with wheel.wheelfile.WheelFile(os.path.join(path, self.file), 'w') as whl:
-            # add source
-            for source_path in self._project.source:
-                whl.write(source_path)
+            with self._project.cd_source():
+                # add source
+                for source_path in self._project.source:
+                    whl.write(source_path)
 
-            # add metadata
-            whl.writestr(f'{whl.dist_info_path}/METADATA', self._project.metadata.as_bytes())
-            whl.writestr(f'{whl.dist_info_path}/WHEEL', self.wheel)
-            if self.entrypoints_txt:
-                whl.writestr(f'{whl.dist_info_path}/entrypoints.txt', self.entrypoints_txt)
+                # add metadata
+                whl.writestr(f'{whl.dist_info_path}/METADATA', self._project.metadata.as_bytes())
+                whl.writestr(f'{whl.dist_info_path}/WHEEL', self.wheel)
+                if self.entrypoints_txt:
+                    whl.writestr(f'{whl.dist_info_path}/entrypoints.txt', self.entrypoints_txt)
 
     @property
     def wheel(self) -> bytes:
