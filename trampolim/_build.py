@@ -201,7 +201,7 @@ class Project():
     @property
     def binary_source(self) -> Iterable[str]:
         '''Python package source -- for binary distributions.'''
-        return self.modules_source | self.config_source_include | self._extra_binary_source
+        return self.modules_source | self._extra_binary_source
 
     @property
     def root_modules(self) -> Sequence[str]:
