@@ -271,7 +271,7 @@ def test_vcs_test_top_module(mocker, package_test_top_level_module):
 def tests_source_include(package_source_include):
     assert sorted(
         '/'.join(path.split(os.path.sep))
-        for path in trampolim._build.Project().source
+        for path in trampolim._build.Project().distribution_source
     ) == [
         'helper-data/a',
         'helper-data/b',

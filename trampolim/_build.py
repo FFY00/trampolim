@@ -15,7 +15,7 @@ import tarfile
 import typing
 import warnings
 
-from typing import IO, Dict, Iterable, Iterator, List, Mapping, Optional, Sequence, Tuple, Union
+from typing import IO, Dict, Iterable, Iterator, List, Mapping, Optional, Sequence, Set, Tuple, Union
 
 import packaging.markers
 import packaging.requirements
@@ -74,6 +74,8 @@ class Project():
 
         self.version  # calculate version
 
+        self._extra_binary_source: Set[str] = set()
+
         # warn users about test/tests modules -- they probably don't want them installed!
         for module in ('test', 'tests'):
             if module in self.root_modules:
@@ -86,7 +88,7 @@ class Project():
         self._srcpath = os.path.join('.trampolim', 'source')
         shutil.rmtree(self._srcpath, ignore_errors=True)
         os.makedirs(self._srcpath)
-        for file in itertools.chain(self.source, self.build_system_source):
+        for file in itertools.chain(self.distribution_source, self.build_system_source):
             dirpath = os.path.dirname(file)
             if dirpath:
                 destdirpath = os.path.join(self._srcpath, dirpath)
@@ -117,26 +119,14 @@ class Project():
         ]))
 
     @property
-    def source(self) -> Iterable[str]:
-        '''Project source.'''
-        source = set()
+    def distribution_source(self) -> Iterable[str]:
+        '''Project source -- for source distributions.'''
+        return self.modules_source | self.config_source_include
 
-        # TODO: ignore files not escaped as specified in PEP 427
-        for module in self.root_modules:
-            if module.endswith('.py'):  # file
-                source.add(module)
-            else:  # dir
-                source |= {
-                    path for path in glob.glob(os.path.join(module, '**'), recursive=True)
-                    if os.path.isfile(path) and not path.endswith('.pyc')
-                }
-
-        source |= {
-            os.path.sep.join(path.split('/'))
-            for path in self._trampolim_meta.source_include
-        }
-
-        return source
+    @property
+    def binary_source(self) -> Iterable[str]:
+        '''Python package source -- for binary distributions.'''
+        return self.modules_source | self.config_source_include
 
     @property
     def root_modules(self) -> Sequence[str]:
@@ -155,6 +145,29 @@ class Project():
         if name in files:  # dir module
             return [name]
         raise TrampolimError(f'Could not find the top-level module(s) (looking for `{name}`)')
+
+    @property
+    def modules_source(self) -> Set[str]:
+        '''Full source for the modules in root_modules.'''
+        source = set()
+        # TODO: ignore files not escaped as specified in PEP 427
+        for module in self.root_modules:
+            if module.endswith('.py'):  # file
+                source.add(module)
+            else:  # dir
+                source |= {
+                    path for path in glob.glob(os.path.join(module, '**'), recursive=True)
+                    if os.path.isfile(path) and not path.endswith('.pyc')
+                }
+        return source
+
+    @property
+    def config_source_include(self) -> Set[str]:
+        '''Extra source include paths specified in the config.'''
+        return {
+            os.path.sep.join(path.split('/'))
+            for path in self._trampolim_meta.source_include
+        }
 
     @property
     def name(self) -> str:
@@ -409,7 +422,7 @@ class SdistBuilder():
             tar.add('pyproject.toml', f'{self.name}/pyproject.toml')
 
             # add source
-            for source_path in self._project.source:
+            for source_path in self._project.distribution_source:
                 tar.add(source_path, f'{self.name}/{source_path}')
 
             # add license
