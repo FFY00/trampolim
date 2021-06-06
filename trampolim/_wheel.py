@@ -30,7 +30,7 @@ class WheelBuilder():
         with wheel.wheelfile.WheelFile(os.path.join(path, self.file), 'w') as whl:
             with self._project.cd_source():
                 # add source
-                for source_path in self._project.source:
+                for source_path in self._project.binary_source:
                     whl.write(source_path)
 
                 # add metadata
