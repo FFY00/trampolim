@@ -187,6 +187,7 @@ class Project():
     def build_system_source(self) -> Iterable[str]:
         return iter(filter(None, [
             'pyproject.toml',
+            '.trampolim.py' if os.path.isfile('.trampolim.py') else None,
             self.license_file,
             self.readme_file,
         ]))
@@ -493,6 +494,12 @@ class SdistBuilder():
         with self._project.cd_dist_source():
             # add pyproject.toml
             tar.add('pyproject.toml', f'{self.name}/pyproject.toml')
+
+            # add .trampolim.py
+            try:
+                tar.add('.trampolim.py', f'{self.name}/.trampolim.py')
+            except FileNotFoundError:  # pragma: no cover
+                pass
 
             # add source
             for source_path in self._project.distribution_source:
