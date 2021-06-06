@@ -2,8 +2,10 @@
 
 import contextlib
 import email
+import functools
 import glob
 import gzip
+import importlib.util
 import io
 import itertools
 import os
@@ -23,6 +25,7 @@ import packaging.version
 import toml
 
 import trampolim._metadata
+import trampolim._tasks
 
 
 if sys.version_info < (3, 8):
@@ -51,6 +54,15 @@ class ConfigurationError(TrampolimError):
 
 class TrampolimWarning(Warning):
     '''Backend warning.'''
+
+
+def load_file_module(name: str, path: str) -> object:
+    spec = importlib.util.spec_from_file_location(name, path)
+    if not spec.loader:  # pragma: no cover
+        raise ImportError(f'Unable to import `{path}`: no loader')
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)  # type: ignore
+    return module
 
 
 class Project():
@@ -100,6 +112,42 @@ class Project():
                 follow_symlinks=False,
             )
 
+        # collect tasks
+        if os.path.isfile('.trampolim.py'):
+            config = load_file_module('trampolim_config', '.trampolim.py')
+            self._tasks = [
+                getattr(config, attr)
+                for attr in dir(config)
+                if not attr.startswith('_') and isinstance(
+                    getattr(config, attr), trampolim._tasks.Task
+                )
+            ]
+        else:
+            self._tasks = []
+
+    @functools.lru_cache(maxsize=None)
+    def run_tasks(self) -> None:
+        '''Runs the project build tasks.
+
+        If the ``SOURCE_DATE_EPOCH`` environment variable is present, extra
+        sources files added by tasks will have their atime and mtime set to it.
+        '''
+        with self.cd_source():
+            for task in self._tasks:
+                print(f'> Running `{task.name}`')
+                session = trampolim._tasks.Session(self)
+                task.run(session)
+                self._extra_binary_source |= set(session.extra_source)
+                # TODO: print summary
+
+        # set the extra source atime and mtime
+        source_date_epoch = os.environ.get('SOURCE_DATE_EPOCH')
+        if source_date_epoch:
+            timestamp = int(source_date_epoch)
+            with self.cd_source():
+                for file in self._extra_binary_source:
+                    os.utime(file, times=(timestamp, timestamp))
+
     @contextlib.contextmanager
     def cd_source(self) -> Iterator[None]:
         cwd = os.getcwd()
@@ -126,7 +174,7 @@ class Project():
     @property
     def binary_source(self) -> Iterable[str]:
         '''Python package source -- for binary distributions.'''
-        return self.modules_source | self.config_source_include
+        return self.modules_source | self.config_source_include | self._extra_binary_source
 
     @property
     def root_modules(self) -> Sequence[str]:

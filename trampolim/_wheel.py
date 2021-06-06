@@ -27,6 +27,7 @@ class WheelBuilder():
         return f'{self.name}.whl'
 
     def build(self, path: trampolim._build.Path) -> None:
+        self._project.run_tasks()
         with wheel.wheelfile.WheelFile(os.path.join(path, self.file), 'w') as whl:
             with self._project.cd_source():
                 # add source

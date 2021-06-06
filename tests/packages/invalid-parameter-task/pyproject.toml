@@ -1,0 +1,7 @@
+[build-system]
+build-backend = 'trampolim'
+requires = ['trampolim']
+
+[project]
+name = 'invalid-parameter-task'
+version = '0.0.0'

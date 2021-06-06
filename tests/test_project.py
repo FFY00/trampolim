@@ -279,3 +279,26 @@ def tests_source_include(package_source_include):
         'some-config.txt',
         'source_include.py',
     ]
+
+
+def tests_task_extra_source(package_full_tasks):
+    project = trampolim._build.Project()
+    project.run_tasks()
+
+    assert sorted(
+        '/'.join(path.split(os.path.sep))
+        for path in project.binary_source
+    ) == [
+        'example_source.py',
+        'full_tasks.py',
+    ]
+
+
+def tests_task_extra_source_epoch(source_date_epoch, package_full_tasks):
+    project = trampolim._build.Project()
+    project.run_tasks()
+
+    with project.cd_source():
+        st = os.stat('example_source.py')
+
+    assert st.st_atime == st.st_mtime == 0

@@ -1,0 +1,7 @@
+[build-system]
+build-backend = 'trampolim'
+requires = ['trampolim']
+
+[project]
+name = 'full-tasks'
+version = '0.0.1'

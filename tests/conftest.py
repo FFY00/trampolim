@@ -50,6 +50,19 @@ def tmp_dir_session():
             pass  # this sometimes fails on windows :/
 
 
+@pytest.fixture
+def source_date_epoch():
+    old_val = os.environ.get('SOURCE_DATE_EPOCH')
+    os.environ['SOURCE_DATE_EPOCH'] = '0'
+    try:
+        yield
+    finally:  # pragma: no cover
+        if old_val is not None:
+            os.environ['SOURCE_DATE_EPOCH'] = old_val
+        else:
+            del os.environ['SOURCE_DATE_EPOCH']
+
+
 def generate_package_fixture(package):
     @pytest.fixture
     def fixture():
