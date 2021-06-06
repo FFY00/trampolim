@@ -10,9 +10,9 @@ A modern Python build backend.
 
 ### Features
 
-- Task system, allowing to run arbitrary Python code during the build process (**Planned**)
-- Easy to use CLI -- build, publish, check for errors and recommended practices (**Planned**)
+- Task system, allowing to run arbitrary Python code during the build process
 - Automatic version detection from git repos and git archives
+- Easy to use CLI -- build, publish, check for errors and recommended practices (**Planned**)
 
 ### Usage
 
