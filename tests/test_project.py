@@ -298,7 +298,7 @@ def tests_task_extra_source_epoch(source_date_epoch, package_full_tasks):
     project = trampolim._build.Project()
     project.run_tasks()
 
-    with project.cd_source():
+    with project.cd_binary_source():
         st = os.stat('example_source.py')
 
     assert st.st_atime == st.st_mtime == 0

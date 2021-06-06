@@ -17,7 +17,7 @@ import tarfile
 import typing
 import warnings
 
-from typing import IO, Dict, Iterable, Iterator, List, Mapping, Optional, Sequence, Set, Tuple, Union
+from typing import IO, ContextManager, Dict, Iterable, Iterator, List, Mapping, Optional, Sequence, Set, Tuple, Union
 
 import packaging.markers
 import packaging.requirements
@@ -65,6 +65,36 @@ def load_file_module(name: str, path: str) -> object:
     return module
 
 
+@contextlib.contextmanager
+def cd(path: str) -> Iterator[None]:
+    cwd = os.getcwd()
+    os.chdir(path)
+
+    try:
+        yield
+    finally:
+        os.chdir(cwd)
+
+
+def ensure_empty_dir(path: str) -> None:
+    shutil.rmtree(path, ignore_errors=True)
+    os.makedirs(path)
+
+
+def copy_to_dir(files: Iterable[str], out: str) -> None:
+    for file in files:
+        dirpath = os.path.dirname(file)
+        if dirpath:
+            destdirpath = os.path.join(out, dirpath)
+            os.makedirs(destdirpath, exist_ok=True)
+            shutil.copystat(dirpath, destdirpath)
+        shutil.copy2(
+            file,
+            os.path.join(out, file),
+            follow_symlinks=False,
+        )
+
+
 class Project():
     _VALID_DYNAMIC = [
         'version',
@@ -96,21 +126,20 @@ class Project():
                     TrampolimWarning,
                 )
 
-        # copy source to working directory
-        self._srcpath = os.path.join('.trampolim', 'source')
-        shutil.rmtree(self._srcpath, ignore_errors=True)
-        os.makedirs(self._srcpath)
-        for file in itertools.chain(self.distribution_source, self.build_system_source):
-            dirpath = os.path.dirname(file)
-            if dirpath:
-                destdirpath = os.path.join(self._srcpath, dirpath)
-                os.makedirs(destdirpath, exist_ok=True)
-                shutil.copystat(dirpath, destdirpath)
-            shutil.copy2(
-                file,
-                os.path.join(self._srcpath, file),
-                follow_symlinks=False,
-            )
+        # copy distribution source to working directory
+        self._dist_srcpath = os.path.join('.trampolim', 'dist-source')
+        ensure_empty_dir(self._dist_srcpath)
+        copy_to_dir(
+            itertools.chain(self.distribution_source, self.build_system_source),
+            self._dist_srcpath,
+        )
+        # copy binary source to working directory
+        self._bin_srcpath = os.path.join('.trampolim', 'bin-source')
+        ensure_empty_dir(self._bin_srcpath)
+        copy_to_dir(
+            itertools.chain(self.binary_source, self.build_system_source),
+            self._bin_srcpath,
+        )
 
         # collect tasks
         if os.path.isfile('.trampolim.py'):
@@ -132,7 +161,7 @@ class Project():
         If the ``SOURCE_DATE_EPOCH`` environment variable is present, extra
         sources files added by tasks will have their atime and mtime set to it.
         '''
-        with self.cd_source():
+        with self.cd_binary_source():
             for task in self._tasks:
                 print(f'> Running `{task.name}`')
                 session = trampolim._tasks.Session(self)
@@ -144,19 +173,15 @@ class Project():
         source_date_epoch = os.environ.get('SOURCE_DATE_EPOCH')
         if source_date_epoch:
             timestamp = int(source_date_epoch)
-            with self.cd_source():
+            with self.cd_binary_source():
                 for file in self._extra_binary_source:
                     os.utime(file, times=(timestamp, timestamp))
 
-    @contextlib.contextmanager
-    def cd_source(self) -> Iterator[None]:
-        cwd = os.getcwd()
-        os.chdir(self._srcpath)
+    def cd_dist_source(self) -> ContextManager[None]:
+        return cd(self._dist_srcpath)
 
-        try:
-            yield
-        finally:
-            os.chdir(cwd)
+    def cd_binary_source(self) -> ContextManager[None]:
+        return cd(self._bin_srcpath)
 
     @property
     def build_system_source(self) -> Iterable[str]:
@@ -465,7 +490,7 @@ class SdistBuilder():
             format=tarfile.PAX_FORMAT,  # changed in 3.8 to GNU
         )
 
-        with self._project.cd_source():
+        with self._project.cd_dist_source():
             # add pyproject.toml
             tar.add('pyproject.toml', f'{self.name}/pyproject.toml')
 
