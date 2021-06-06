@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import inspect
+import pathlib
 
 from typing import Callable, List
 
@@ -19,6 +20,10 @@ class Session():
         self._project = project
 
         self.extra_source: List[str] = []
+
+    @property
+    def source_path(self) -> pathlib.Path:
+        return pathlib.Path(self._project._dist_srcpath)
 
 
 class Task():

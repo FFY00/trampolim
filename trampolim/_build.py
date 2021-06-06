@@ -116,6 +116,7 @@ class Project():
 
         self.version  # calculate version
 
+        self._path = os.getcwd()
         self._extra_binary_source: Set[str] = set()
 
         # warn users about test/tests modules -- they probably don't want them installed!
@@ -127,14 +128,14 @@ class Project():
                 )
 
         # copy distribution source to working directory
-        self._dist_srcpath = os.path.join('.trampolim', 'dist-source')
+        self._dist_srcpath: str = os.path.abspath(os.path.join('.trampolim', 'dist-source'))
         ensure_empty_dir(self._dist_srcpath)
         copy_to_dir(
             itertools.chain(self.distribution_source, self.build_system_source),
             self._dist_srcpath,
         )
         # copy binary source to working directory
-        self._bin_srcpath = os.path.join('.trampolim', 'bin-source')
+        self._bin_srcpath: str = os.path.abspath(os.path.join('.trampolim', 'bin-source'))
         ensure_empty_dir(self._bin_srcpath)
         copy_to_dir(
             itertools.chain(self.binary_source, self.build_system_source),
