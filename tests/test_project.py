@@ -212,6 +212,14 @@ def test_vcs_git_repo(mocker, package_no_version):
     assert str(trampolim._build.Project().version) == '1.0.0.23+gea1f213'
 
 
+def test_vcs_git_repo_exact(mocker, package_no_version):
+    mocker.patch(
+        'subprocess.check_output',
+        side_effect=[b'v2.1.1-0-g5ce8958'],
+    )
+    assert str(trampolim._build.Project().version) == '2.1.1'
+
+
 def test_vcs_no_version(mocker, package_no_version):
     mocker.patch('subprocess.check_output', side_effect=FileNotFoundError)
     with pytest.raises(trampolim.TrampolimError, match=re.escape(

@@ -300,9 +300,9 @@ class Project():
         # from git repo
         try:
             tag, r, commit = subprocess.check_output([
-                'git', 'describe', '--tags'
+                'git', 'describe', '--tags', '--long'
             ]).decode().strip(' v').split('-')
-            return packaging.version.Version(f'{tag}.{r}+{commit}')
+            return packaging.version.Version(f'{tag}' if r == '0' else f'{tag}.{r}+{commit}')
         except (FileNotFoundError, subprocess.CalledProcessError, TypeError):
             pass
 
