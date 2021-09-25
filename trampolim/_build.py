@@ -58,6 +58,7 @@ class TrampolimWarning(Warning):
 
 def load_file_module(name: str, path: str) -> object:
     spec = importlib.util.spec_from_file_location(name, path)
+    assert spec
     if not spec.loader:  # pragma: no cover
         raise ImportError(f'Unable to import `{path}`: no loader')
     module = importlib.util.module_from_spec(spec)
