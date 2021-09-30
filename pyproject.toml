@@ -26,6 +26,7 @@ classifiers = [
 dependencies = [
   'toml',
   'packaging',
+  'pep621>=0.4.0',
   'backports.cached-property ; python_version < "3.8"',
 ]
 

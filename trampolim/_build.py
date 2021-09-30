@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 
 import contextlib
+import dataclasses
 import email
 import functools
 import glob
@@ -17,15 +18,17 @@ import tarfile
 import typing
 import warnings
 
-from typing import IO, ContextManager, Dict, Iterable, Iterator, List, Mapping, Optional, Sequence, Set, Tuple, Union
+from typing import IO, ContextManager, Iterable, Iterator, List, Optional, Sequence, Set, Union
 
 import packaging.markers
 import packaging.requirements
 import packaging.version
+import pep621
 import toml
 
 import trampolim._metadata
 import trampolim._tasks
+import trampolim.types
 
 
 if sys.version_info < (3, 8):
@@ -108,10 +111,10 @@ class Project():
             with open('pyproject.toml') as f:
                 self._pyproject = toml.load(f)
 
-        self._stdmeta = trampolim._metadata.StandardMetadata(self._pyproject)
-        self._trampolim_meta = trampolim._metadata.TrampolimMetadata(self._pyproject)
+        self._meta = pep621.StandardMetadata.from_pyproject(self._pyproject)
+        self._trampolim_meta = trampolim._metadata.TrampolimMetadata.from_pyproject(self._pyproject)
 
-        for field in self._stdmeta.dynamic:
+        for field in self._meta.dynamic:
             if field not in self._VALID_DYNAMIC:
                 raise ConfigurationError(f'Unsupported field `{field}` in `project.dynamic`')
 
@@ -186,12 +189,21 @@ class Project():
         return cd(self._bin_srcpath)
 
     @property
+    def name(self) -> str:
+        assert isinstance(self._meta.name, str)
+        return self._meta.name
+
+    @property
+    def normalized_name(self) -> str:
+        return self.name.replace('-', '_')
+
+    @property
     def build_system_source(self) -> Iterable[str]:
         return iter(filter(None, [
             'pyproject.toml',
             '.trampolim.py' if os.path.isfile('.trampolim.py') else None,
-            self.license_file,
-            self.readme_file,
+            self._meta.license.file if self._meta.license else None,
+            self._meta.readme.file if self._meta.readme else None,
         ]))
 
     @property
@@ -211,7 +223,7 @@ class Project():
         By default will look for the normalized name of the project name
         replacing `-` with `_`.
         '''
-        if 'top-level-modules' in self._trampolim_meta:
+        if self._trampolim_meta.top_level_modules:
             return self._trampolim_meta.top_level_modules
 
         name = self.name.replace('-', '_')
@@ -246,18 +258,22 @@ class Project():
         }
 
     @property
-    def name(self) -> str:
-        '''Project name.'''
-        return self._stdmeta.name
+    def meta(self) -> trampolim.types.FrozenMetadata:
+        '''Project metadata.'''
+        return trampolim.types.FrozenMetadata(
+            **dataclasses.asdict(self._meta),
+            **dataclasses.asdict(self._trampolim_meta),
+        )  # type: ignore[call-arg]
 
     @cached_property
     def version(self) -> packaging.version.Version:  # noqa: C901
         '''Project version.'''
 
-        if self._stdmeta.version:
-            return self._stdmeta.version
+        if self._meta.version:
+            assert isinstance(self._meta.version, packaging.version.Version)
+            return self._meta.version
 
-        if 'version' not in self._stdmeta.dynamic:
+        if 'version' not in self._meta.dynamic:
             raise ConfigurationError(
                 'Missing required field `project.version` (if you want to infer the project version '
                 'automatically, `version` needs to be added to the `project.dynamic` list field)'
@@ -315,145 +331,6 @@ class Project():
     def platform_tag(self) -> str:
         return 'any'
 
-    @property
-    def description(self) -> Optional[str]:
-        '''Project description.'''
-        return self._stdmeta.description
-
-    @property
-    def dependencies(self) -> List[str]:
-        '''Project dependencies.'''
-        return self._stdmeta.dependencies
-
-    @property
-    def optional_dependencies(self) -> Dict[str, List[str]]:
-        '''Project optional dependencies.'''
-        return self._stdmeta.optional_dependencies
-
-    @property
-    def requires_python(self) -> Optional[packaging.specifiers.Specifier]:
-        '''Project Python requirements.'''
-        return self._stdmeta.requires_python
-
-    @property
-    def keywords(self) -> List[str]:
-        '''Project keywords.'''
-        return self._stdmeta.keywords
-
-    @property
-    def license_file(self) -> Optional[str]:
-        '''Project license file (if any).'''
-        return self._stdmeta.license_file
-
-    @property
-    def license_text(self) -> Optional[str]:
-        '''Project license text.'''
-        return self._stdmeta.license_text
-
-    @property
-    def readme_file(self) -> Optional[str]:
-        '''Project readme file (if any).'''
-        return self._stdmeta.readme_file
-
-    @property
-    def readme_text(self) -> Optional[str]:
-        '''Project readme text.'''
-        return self._stdmeta.readme_text
-
-    @property
-    def readme_content_type(self) -> Optional[str]:
-        '''Project readme content type.'''
-        return self._stdmeta.readme_content_type
-
-    @property
-    def authors(self) -> List[Tuple[str, str]]:
-        '''Project authors.'''
-        return self._stdmeta.authors
-
-    @property
-    def maintainers(self) -> List[Tuple[str, str]]:
-        '''Project maintainers.'''
-        return self._stdmeta.maintainers or self._stdmeta.authors
-
-    @property
-    def classifiers(self) -> List[str]:
-        '''Project trove classifiers.'''
-        return self._stdmeta.classifiers
-
-    @property
-    def urls(self) -> Mapping[str, str]:
-        '''Project homepage.'''
-        return self._stdmeta.urls
-
-    @property
-    def scripts(self) -> Dict[str, str]:
-        '''Project console script entrypoints.'''
-        return self._stdmeta.scripts
-
-    @property
-    def gui_scripts(self) -> Dict[str, str]:
-        '''Project GUI script entrypoints.'''
-        return self._stdmeta.gui_scripts
-
-    @property
-    def entrypoints(self) -> Dict[str, Dict[str, str]]:
-        '''Project extra entrypoints.'''
-        return self._stdmeta.entrypoints
-
-    def _person_list(self, people: List[Tuple[str, str]]) -> str:
-        return ', '.join([
-            '{}{}'.format(
-                name,
-                f' <{_email}>' if _email else ''
-            )
-            for name, _email in people
-        ])
-
-    @property
-    def metadata(self) -> 'RFC822Message':  # noqa: C901
-        '''dist-info METADATA.'''
-        metadata = RFC822Message()
-        metadata['Metadata-Version'] = '2.2'
-        metadata['Name'] = self.name
-        metadata['Version'] = str(self.version)
-        # skip 'Platform' -- we currently only support pure
-        # skip 'Supported-Platform' -- we currently only support pure
-        metadata['Summary'] = self.description
-        metadata['Keywords'] = ' '.join(self.keywords)
-        if 'homepage' in self.urls:
-            metadata['Home-page'] = self.urls['homepage']
-        # skip 'Download-URL'
-        metadata['Author'] = metadata['Author-Email'] = self._person_list(self.authors)
-        if self.maintainers != self.authors:
-            metadata['Maintainer'] = metadata['Maintainer-Email'] = self._person_list(self.maintainers)
-        # TODO: 'License'
-        for classifier in self.classifiers:
-            metadata['Classifier'] = classifier
-        # skip 'Provides-Dist'
-        # skip 'Obsoletes-Dist'
-        # skip 'Requires-External'
-        for name, url in self.urls.items():
-            metadata['Project-URL'] = f'{name.capitalize()}, {url}'
-        if self.requires_python:
-            metadata['Requires-Python'] = str(self.requires_python)
-        for dep in self.dependencies:
-            metadata['Requires-Dist'] = dep
-        for extra, requirements in self.optional_dependencies.items():
-            metadata['Provides-Extra'] = extra
-            for req_string in requirements:
-                req = packaging.requirements.Requirement(req_string)
-                if req.marker:  # append our extra to the marker
-                    req.marker = packaging.markers.Marker(
-                        str(req.marker) + f' and extra == "{extra}"'
-                    )
-                else:  # add our extra marker
-                    req.marker = packaging.markers.Marker(f'extra == "{extra}"')
-                metadata['Requires-Dist'] = str(req)
-        if self.readme_content_type:
-            metadata['Description-Content-Type'] = self.readme_content_type
-        metadata.body = self.readme_text
-        return metadata
-
 
 class SdistBuilder():
     '''Simple sdist builder.
@@ -508,21 +385,24 @@ class SdistBuilder():
                 tar.add(source_path, f'{self.name}/{source_path}')
 
             # add license
-            if self._project.license_file:
-                tar.add(self._project.license_file, f'{self.name}/{self._project.license_file}')
-            elif self._project.license_text:
-                license_raw = self._project.license_text.encode()
-                info = tarfile.TarInfo(f'{self.name}/LICENSE')
-                info.size = len(license_raw)
-                with io.BytesIO(license_raw) as data:
-                    tar.addfile(info, data)
+            license_ = self._project._meta.license
+            if license_:
+                if license_.file:
+                    tar.add(license_.file, f'{self.name}/{license_.file}')
+                elif license_.text:
+                    license_raw = license_.text.encode()
+                    info = tarfile.TarInfo(f'{self.name}/LICENSE')
+                    info.size = len(license_raw)
+                    with io.BytesIO(license_raw) as data:
+                        tar.addfile(info, data)
 
             # add readme
-            if self._project.readme_file:
-                tar.add(self._project.readme_file, f'{self.name}/{self._project.readme_file}')
+            readme = self._project._meta.readme
+            if readme:
+                tar.add(readme.file, f'{self.name}/{readme.file}')
 
         # PKG-INFO
-        pkginfo = self._project.metadata.as_bytes()
+        pkginfo = bytes(self._project._meta.as_rfc822())
         info = tarfile.TarInfo(f'{self.name}/PKG-INFO')
         info.size = len(pkginfo)
         with io.BytesIO(pkginfo) as data:
@@ -531,28 +411,3 @@ class SdistBuilder():
         # cleanup
         tar.close()
         file.close()
-
-
-class RFC822Message():
-    def __init__(self) -> None:
-        self._headers: Dict[str, List[str]] = {}
-        self.body: Optional[str] = None
-
-    def __setitem__(self, name: str, value: Optional[str]) -> None:
-        if not value:
-            return
-        if name not in self._headers:
-            self._headers[name] = []
-        self._headers[name].append(value)
-
-    def __str__(self) -> str:
-        text = ''
-        for name, entries in self._headers.items():
-            for entry in entries:
-                text += f'{name}: {entry}\n'
-        if self.body:
-            text += '\n' + self.body
-        return text
-
-    def as_bytes(self) -> bytes:
-        return str(self).encode()

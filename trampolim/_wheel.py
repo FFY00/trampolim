@@ -35,7 +35,7 @@ class WheelBuilder():
                     whl.write(source_path)
 
                 # add metadata
-                whl.writestr(f'{whl.dist_info_path}/METADATA', self._project.metadata.as_bytes())
+                whl.writestr(f'{whl.dist_info_path}/METADATA', bytes(self._project._meta.as_rfc822()))
                 whl.writestr(f'{whl.dist_info_path}/WHEEL', self.wheel)
                 if self.entrypoints_txt:
                     whl.writestr(f'{whl.dist_info_path}/entrypoints.txt', self.entrypoints_txt)
@@ -57,10 +57,10 @@ class WheelBuilder():
     @property
     def entrypoints_txt(self) -> bytes:
         '''dist-info entry-points.txt.'''
-        data = self._project.entrypoints.copy()
+        data = self._project._meta.entrypoints.copy()
         data.update({
-            'console_scripts': self._project.scripts,
-            'gui_scripts': self._project.gui_scripts,
+            'console_scripts': self._project._meta.scripts,
+            'gui_scripts': self._project._meta.gui_scripts,
         })
 
         text = ''
