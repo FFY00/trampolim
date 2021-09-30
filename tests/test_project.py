@@ -43,33 +43,34 @@ def test_no_version():
 
 def test_full_metadata(package_full_metadata):
     p = trampolim._build.Project()
-    assert p.name == 'full-metadata'
-    assert str(p.version) == '3.2.1'
-    assert p.description == 'A package with all the metadata :)'
-    assert p.license_text == 'some license text'
-    assert p.keywords == ['trampolim', 'is', 'interesting']
-    assert p.authors == [
+    m = p.meta
+    assert m.name == 'full-metadata'
+    assert str(m.version) == '3.2.1'
+    assert m.description == 'A package with all the metadata :)'
+    assert m.license.text == 'some license text'
+    assert m.keywords == ['trampolim', 'is', 'interesting']
+    assert m.authors == [
         ('Unknown', 'example@example.com'),
         ('Example!', None),
     ]
-    assert p.maintainers == [
+    assert m.maintainers == [
         ('Other Example', 'other@example.com'),
     ]
-    assert p.classifiers == [
+    assert m.classifiers == [
         'Development Status :: 4 - Beta',
         'Programming Language :: Python'
     ]
-    assert p.urls['homepage'] == 'example.com'
-    assert p.urls['documentation'] == 'readthedocs.org'
-    assert p.urls['repository'] == 'github.com/some/repo'
-    assert p.urls['changelog'] == 'github.com/some/repo/blob/master/CHANGELOG.rst'
-    assert p.scripts == {
+    assert m.urls['homepage'] == 'example.com'
+    assert m.urls['documentation'] == 'readthedocs.org'
+    assert m.urls['repository'] == 'github.com/some/repo'
+    assert m.urls['changelog'] == 'github.com/some/repo/blob/master/CHANGELOG.rst'
+    assert m.scripts == {
         'full-metadata': 'full_metadata:main_cli',
     }
-    assert p.gui_scripts == {
+    assert m.gui_scripts == {
         'full-metadata-gui': 'full_metadata:main_gui',
     }
-    assert p.entrypoints == {
+    assert m.entrypoints == {
         'custom': {
             'full-metadata': 'full_metadata:main_custom',
         }
@@ -82,16 +83,15 @@ def test_full_metadata(package_full_metadata):
 
 
 def test_rfc822_metadata(package_full_metadata):
-    assert str(trampolim._build.Project().metadata) == textwrap.dedent('''
-        Metadata-Version: 2.2
+    assert str(trampolim._build.Project()._meta.as_rfc822()) == textwrap.dedent('''
+        Metadata-Version: 2.1
         Name: full-metadata
         Version: 3.2.1
         Summary: A package with all the metadata :)
         Keywords: trampolim is interesting
         Home-page: example.com
-        Author: Unknown <example@example.com>, Example!
-        Author-Email: Unknown <example@example.com>, Example!
-        Maintainer: Other Example <other@example.com>
+        Author: Example!
+        Author-Email: Unknown <example@example.com>
         Maintainer-Email: Other Example <other@example.com>
         Classifier: Development Status :: 4 - Beta
         Classifier: Programming Language :: Python
@@ -116,31 +116,11 @@ def test_rfc822_metadata(package_full_metadata):
 
 
 def test_rfc822_metadata_bytes(package_sample_source):
-    assert trampolim._build.Project().metadata.as_bytes() == textwrap.dedent('''
-        Metadata-Version: 2.2
+    assert bytes(trampolim._build.Project()._meta.as_rfc822()) == textwrap.dedent('''
+        Metadata-Version: 2.1
         Name: sample-source
         Version: 0.0.0
     ''').lstrip().encode()
-
-
-def test_readme_md(package_readme_md):
-    assert trampolim._build.Project().readme_content_type == 'text/markdown'
-
-
-def test_readme_rst(package_readme_rst):
-    assert trampolim._build.Project().readme_content_type == 'text/x-rst'
-
-
-def test_readme_unknown(package_readme_unknown):
-    with pytest.raises(
-        trampolim.TrampolimError,
-        match=re.escape('Could not infer content type for readme file `README.unknown`'),
-    ):
-        assert trampolim._build.Project().readme_content_type
-
-
-def test_readme_unknown_with_type(package_readme_unknown_with_type):
-    assert trampolim._build.Project().readme_content_type == 'text/some-unknown-type'
 
 
 def test_no_module(package_no_module):
@@ -191,18 +171,6 @@ def test_name_normalization(package_sample_source, original, normalized):
         version = '1.0.0'
         license = { text = '...' }
     '''.replace('%NAME%', original)).name == normalized
-
-
-def test_license_file(package_license_file):
-    assert trampolim._build.Project().license_file == 'some-license-file'
-
-
-def test_license_text_inline(package_license_text):
-    assert trampolim._build.Project().license_text == 'inline license!'
-
-
-def test_license_text_from_file(package_license_file):
-    assert trampolim._build.Project().license_text == 'blah\n'
 
 
 def test_version(package_sample_source):

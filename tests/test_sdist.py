@@ -76,7 +76,7 @@ def test_pkginfo(package_license_text, sdist_license_text):
     p = trampolim._build.Project()
     t = tarfile.open(sdist_license_text, 'r')
 
-    assert t.extractfile('license-text-0.0.0/PKG-INFO').read() == p.metadata.as_bytes()
+    assert t.extractfile('license-text-0.0.0/PKG-INFO').read() == bytes(p._meta.as_rfc822())
 
 
 def tests_source_include(package_source_include, sdist_source_include):
