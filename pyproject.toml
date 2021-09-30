@@ -32,12 +32,6 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-cli = [
-  'rich',
-]
-pretty = [
-  'rich',
-]
 test = [
   'wheel',
   'pytest',
