@@ -20,7 +20,7 @@ import packaging.markers
 import packaging.requirements
 import packaging.version
 import pep621
-import toml
+import tomli
 
 import trampolim._metadata
 import trampolim._tasks
@@ -102,10 +102,10 @@ class Project():
 
     def __init__(self, _toml: Optional[str] = None) -> None:
         if _toml is not None:
-            self._pyproject = toml.loads(_toml)
+            self._pyproject = tomli.loads(_toml)
         else:
-            with open('pyproject.toml') as f:
-                self._pyproject = toml.load(f)
+            with open('pyproject.toml', 'rb') as f:
+                self._pyproject = tomli.load(f)
 
         self._meta = pep621.StandardMetadata.from_pyproject(self._pyproject)
         self._trampolim_meta = trampolim._metadata.TrampolimMetadata.from_pyproject(self._pyproject)
