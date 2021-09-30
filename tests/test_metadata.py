@@ -5,7 +5,7 @@ import textwrap
 
 import pep621
 import pytest
-import toml
+import tomli
 
 import trampolim
 import trampolim._metadata
@@ -32,4 +32,4 @@ import trampolim._metadata
 )
 def test_trampolim_metadata(package_full_metadata, data, error):
     with pytest.raises(pep621.ConfigurationError, match=re.escape(error)):
-        trampolim._metadata.TrampolimMetadata.from_pyproject(toml.loads(data))
+        trampolim._metadata.TrampolimMetadata.from_pyproject(tomli.loads(data))
