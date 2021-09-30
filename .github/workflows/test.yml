@@ -73,7 +73,7 @@ jobs:
         run: python -m pip install -U pip
 
       - name: Install dependencies
-        run: python -m pip install toml packaging rich wheel pytest pytest-cov pytest-mock backports.cached-property pep621
+        run: python -m pip install toml packaging rich wheel pytest pytest-cov pytest-mock backports.cached-property pep621 types-toml
 
       - name: Install mypy
         run: python -m pip install mypy
