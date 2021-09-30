@@ -2,7 +2,7 @@
 build-backend = 'trampolim'
 backend-path = ['.']
 requires = [
-  'toml',
+  'tomli>=1.0.0',
   'packaging',
   'pep621>=0.4.0',
   'backports.cached-property ; python_version < "3.8"',
