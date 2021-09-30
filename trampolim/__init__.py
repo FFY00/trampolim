@@ -9,7 +9,7 @@ from trampolim._build import ConfigurationError, TrampolimError, TrampolimWarnin
 from trampolim._tasks import Session, task  # noqa: F401
 
 
-__version__ = '0.0.3'
+__version__ = '0.0.4'
 
 # get_requires
 

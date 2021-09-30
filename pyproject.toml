@@ -10,7 +10,7 @@ requires = [
 
 [project]
 name = 'trampolim'
-version = '0.0.3'
+version = '0.0.4'
 description = 'A modern Python build backend'
 readme = 'README.md'
 requires-python = '>=3.7'

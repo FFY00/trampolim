@@ -3,6 +3,16 @@ Changelog
 +++++++++
 
 
+0.0.4 (30-09-2021)
+==================
+
+- Use TOML 1.0 compliant parser (`PR #11`_)
+- Fix incorrect files being included in wheels
+
+.. _PR #11: https://github.com/FFY00/trampolim/pull/11
+
+
+
 0.0.3 (06-06-2021)
 ==================
 
