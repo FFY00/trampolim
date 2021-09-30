@@ -3,6 +3,7 @@
 from typing import Any, Dict, List, Optional
 
 import trampolim._build
+import trampolim._sdist
 
 from trampolim._build import ConfigurationError, TrampolimError, TrampolimWarning  # noqa: F401
 from trampolim._tasks import Session, task  # noqa: F401
@@ -42,7 +43,7 @@ def build_sdist(
     config_settings: Optional[Dict[str, Any]] = None,
 ) -> str:
     project = trampolim._build.Project()
-    builder = trampolim._build.SdistBuilder(project)
+    builder = trampolim._sdist.SdistBuilder(project)
 
     builder.build(sdist_directory)
     return builder.file
