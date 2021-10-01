@@ -18,7 +18,7 @@ def lint(session):
 
 
 @nox.session(python=['3.7', '3.8', '3.9'], reuse_venv=True)
-def tests(session):
+def test(session):
     """
     Run the unit and regular tests.
     """
