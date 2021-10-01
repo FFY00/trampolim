@@ -245,29 +245,45 @@ def test_vcs_test_top_module(mocker, package_test_top_level_module):
 
 
 def tests_source_include(package_source_include):
-    assert sorted(
-        '/'.join(path.split(os.path.sep))
-        for path in trampolim._build.Project().distribution_source
-    ) == [
+    project = trampolim._build.Project()
+    assert set(
+        path.as_posix()
+        for path in project.distribution_source
+    ) == {
+        'pyproject.toml',
         'helper-data/a',
         'helper-data/b',
         'helper-data/c',
         'some-config.txt',
         'source_include.py',
-    ]
+    }
+
+
+def test_src_layout(package_src_layout):
+    project = trampolim._build.Project()
+    assert {
+        destination.as_posix(): path.as_posix()
+        for destination, path in project.binary_source.items()
+    } == {
+        'src_layout/__init__.py': 'src/src_layout/__init__.py',
+        'src_layout/a.py': 'src/src_layout/a.py',
+        'src_layout/b.py': 'src/src_layout/b.py',
+        'src_layout/c.py': 'src/src_layout/c.py',
+        'src_layout/d/__init__.py': 'src/src_layout/d/__init__.py',
+    }
 
 
 def tests_task_extra_source(package_full_tasks):
     project = trampolim._build.Project()
     project.run_tasks()
 
-    assert sorted(
-        '/'.join(path.split(os.path.sep))
-        for path in project.binary_source
-    ) == [
-        'example_source.py',
-        'full_tasks.py',
-    ]
+    assert {
+        destination.as_posix(): path.as_posix()
+        for destination, path in project.binary_source.items()
+    } == {
+        'example_source.py': 'example_source.py',
+        'full_tasks.py': 'full_tasks.py',
+    }
 
 
 def tests_task_extra_source_epoch(source_date_epoch, package_full_tasks):
@@ -278,3 +294,10 @@ def tests_task_extra_source_epoch(source_date_epoch, package_full_tasks):
         st = os.stat('example_source.py')
 
     assert st.st_atime == st.st_mtime == 0
+
+
+def test_absolute_module_location(package_absolute_module_location):
+    with pytest.raises(trampolim._build.ConfigurationError, match=re.escape(
+        'Location in `tool.trampolim.module-location` is not relative to the project source: /hello'
+    )):
+        trampolim._build.Project()

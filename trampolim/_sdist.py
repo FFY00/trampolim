@@ -3,6 +3,7 @@
 import gzip
 import io
 import os.path
+import pathlib
 import tarfile
 import typing
 
@@ -50,18 +51,10 @@ class SdistBuilder():
         )
 
         with self._project.cd_dist_source():
-            # add pyproject.toml
-            tar.add('pyproject.toml', f'{self.name}/pyproject.toml')
-
-            # add .trampolim.py
-            try:
-                tar.add('.trampolim.py', f'{self.name}/.trampolim.py')
-            except FileNotFoundError:  # pragma: no cover
-                pass
-
             # add source
-            for source_path in self._project.distribution_source:
-                tar.add(source_path, f'{self.name}/{source_path}')
+            for path in self._project.distribution_source:
+                arcname = pathlib.Path(self.name) / path
+                tar.add(os.fspath(path), arcname.as_posix())
 
             # add license
             license_ = self._project._meta.license

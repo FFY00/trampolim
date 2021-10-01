@@ -31,8 +31,8 @@ class WheelBuilder():
         with wheel.wheelfile.WheelFile(os.path.join(path, self.file), 'w') as whl:
             with self._project.cd_binary_source():
                 # add source
-                for source_path in self._project.binary_source:
-                    whl.write(source_path)
+                for destination, source_path in self._project.binary_source.items():
+                    whl.write(source_path, arcname=destination.as_posix())
 
                 # add metadata
                 whl.writestr(f'{whl.dist_info_path}/METADATA', bytes(self._project._meta.as_rfc822()))

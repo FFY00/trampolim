@@ -1,0 +1,10 @@
+[build-system]
+build-backend = 'trampolim'
+requires = ['trampolim']
+
+[project]
+name = 'absolute-module-location'
+version = '0.0.0'
+
+[tool.trampolim]
+module-location = '/hello'

@@ -69,3 +69,17 @@ def test_source(package_sample_source, wheel_sample_source):
         for file in expected_source:
             with open(os.path.join(*file.split('/')), 'rb') as f:
                 assert f.read() == w.read(file)
+
+
+def test_src_layout(package_src_layout, wheel_src_layout):
+    with wheel.wheelfile.WheelFile(wheel_src_layout) as w:
+        assert set(w.namelist()) == {
+            'src_layout-0.0.0.dist-info/METADATA',
+            'src_layout-0.0.0.dist-info/RECORD',
+            'src_layout-0.0.0.dist-info/WHEEL',
+            'src_layout/__init__.py',
+            'src_layout/a.py',
+            'src_layout/b.py',
+            'src_layout/c.py',
+            'src_layout/d/__init__.py',
+        }
