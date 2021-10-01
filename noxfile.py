@@ -51,8 +51,9 @@ def tests(session):
 
 @nox.session(reuse_venv=True)
 def type(session):
-    session.install('mypy')
-    session.run('mypy', '-p', 'trampolim', *session.posargs)
+    session.install('mypy', 'packaging', 'tomli', 'rich', 'backports.cached_property')
+    session.run('mypy', '--python-version=3.7', '--package=trampolim', *session.posargs)
+    session.run('mypy', '--python-version=3.9', '--package=trampolim', *session.posargs)
 
 
 @nox.session(reuse_venv=True)
