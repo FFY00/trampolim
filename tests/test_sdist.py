@@ -1,9 +1,15 @@
 # SPDX-License-Identifier: MIT
 
-import os.path
+import pathlib
 import tarfile
 
 import trampolim._build
+
+
+def assert_contents(archive, name, expected_source):
+    for file in expected_source:
+        f = pathlib.Path(*file[len(name):].split('/'))
+        assert f.read_bytes() == archive.extractfile(file).read()
 
 
 def test_pyproject(package_license_file, sdist_license_file):
@@ -44,32 +50,31 @@ def test_readme_file(package_readme_md, sdist_readme_md):
 def test_source(package_sample_source, sdist_sample_source):
     t = tarfile.open(sdist_sample_source, 'r')
 
-    expected_source = [
-        'sample-source-0.0.0/sample_source/e/eb.py',
-        'sample-source-0.0.0/sample_source/e/ea.py',
-        'sample-source-0.0.0/sample_source/e/ec/ecc.py',
-        'sample-source-0.0.0/sample_source/e/ec/eca.py',
-        'sample-source-0.0.0/sample_source/e/ec/ecb.py',
-        'sample-source-0.0.0/sample_source/a.py',
-        'sample-source-0.0.0/sample_source/c.py',
-        'sample-source-0.0.0/sample_source/d/db.py',
-        'sample-source-0.0.0/sample_source/d/da.py',
-        'sample-source-0.0.0/sample_source/b.py',
-        'sample-source-0.0.0/sample_source/f/fc/fcb.py',
-        'sample-source-0.0.0/sample_source/f/fc/fca.py',
-        'sample-source-0.0.0/sample_source/f/fc/fcc.py',
-        'sample-source-0.0.0/sample_source/f/fc/fcc/fcca.py',
-        'sample-source-0.0.0/sample_source/f/fc/fcd/fcda.py',
-        'sample-source-0.0.0/sample_source/f/fc/fcd/fcdb.py',
-        'sample-source-0.0.0/sample_source/f/fb.py',
-        'sample-source-0.0.0/sample_source/f/fa.py',
-    ]
-
-    for file in expected_source:
-        with open(os.path.join(
-            *file[len('sample-source-0.0.0/'):].split('/')
-        ), 'rb') as f:
-            assert f.read() == t.extractfile(file).read()
+    assert_contents(
+        t,
+        'sample-source-0.0.0',
+        [
+            'sample-source-0.0.0/pyproject.toml',
+            'sample-source-0.0.0/sample_source/e/eb.py',
+            'sample-source-0.0.0/sample_source/e/ea.py',
+            'sample-source-0.0.0/sample_source/e/ec/ecc.py',
+            'sample-source-0.0.0/sample_source/e/ec/eca.py',
+            'sample-source-0.0.0/sample_source/e/ec/ecb.py',
+            'sample-source-0.0.0/sample_source/a.py',
+            'sample-source-0.0.0/sample_source/c.py',
+            'sample-source-0.0.0/sample_source/d/db.py',
+            'sample-source-0.0.0/sample_source/d/da.py',
+            'sample-source-0.0.0/sample_source/b.py',
+            'sample-source-0.0.0/sample_source/f/fc/fcb.py',
+            'sample-source-0.0.0/sample_source/f/fc/fca.py',
+            'sample-source-0.0.0/sample_source/f/fc/fcc.py',
+            'sample-source-0.0.0/sample_source/f/fc/fcc/fcca.py',
+            'sample-source-0.0.0/sample_source/f/fc/fcd/fcda.py',
+            'sample-source-0.0.0/sample_source/f/fc/fcd/fcdb.py',
+            'sample-source-0.0.0/sample_source/f/fb.py',
+            'sample-source-0.0.0/sample_source/f/fa.py',
+        ],
+    )
 
 
 def test_pkginfo(package_license_text, sdist_license_text):
@@ -82,16 +87,15 @@ def test_pkginfo(package_license_text, sdist_license_text):
 def tests_source_include(package_source_include, sdist_source_include):
     t = tarfile.open(sdist_source_include, 'r')
 
-    expected_source = [
-        'source-include-0.0.0/helper-data/a',
-        'source-include-0.0.0/helper-data/b',
-        'source-include-0.0.0/helper-data/c',
-        'source-include-0.0.0/some-config.txt',
-        'source-include-0.0.0/source_include.py',
-    ]
-
-    for file in expected_source:
-        with open(os.path.join(
-            *file[len('source-include-0.0.0/'):].split('/')
-        ), 'rb') as f:
-            assert f.read() == t.extractfile(file).read()
+    assert_contents(
+        t,
+        'source-include-0.0.0',
+        [
+            'source-include-0.0.0/pyproject.toml',
+            'source-include-0.0.0/helper-data/a',
+            'source-include-0.0.0/helper-data/b',
+            'source-include-0.0.0/helper-data/c',
+            'source-include-0.0.0/some-config.txt',
+            'source-include-0.0.0/source_include.py',
+        ],
+    )
