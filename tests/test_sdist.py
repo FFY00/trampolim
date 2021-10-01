@@ -99,3 +99,20 @@ def tests_source_include(package_source_include, sdist_source_include):
             'source-include-0.0.0/source_include.py',
         ],
     )
+
+
+def tests_src_layout(package_src_layout, sdist_src_layout):
+    t = tarfile.open(sdist_src_layout, 'r')
+
+    assert_contents(
+        t,
+        'src-layout-0.0.0',
+        [
+            'src-layout-0.0.0/src/src_layout/d/__init__.py',
+            'src-layout-0.0.0/src/src_layout/b.py',
+            'src-layout-0.0.0/src/src_layout/__init__.py',
+            'src-layout-0.0.0/pyproject.toml',
+            'src-layout-0.0.0/src/src_layout/c.py',
+            'src-layout-0.0.0/src/src_layout/a.py',
+        ],
+    )

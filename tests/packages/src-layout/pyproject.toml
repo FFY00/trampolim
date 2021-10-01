@@ -1,0 +1,10 @@
+[build-system]
+build-backend = 'trampolim'
+requires = ['trampolim']
+
+[project]
+name = 'src-layout'
+version = '0.0.0'
+
+[tool.trampolim]
+module-location = 'src'

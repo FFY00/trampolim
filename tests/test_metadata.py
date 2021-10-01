@@ -24,6 +24,13 @@ import trampolim._metadata
         (
             textwrap.dedent('''
                 [tool.trampolim]
+                module-location = 0
+            '''),
+            ('Field `tool.trampolim.module-location` has an invalid type, expecting a string (got `0`)'),
+        ),
+        (
+            textwrap.dedent('''
+                [tool.trampolim]
                 source-include = 0
             '''),
             ('Field `tool.trampolim.source-include` has an invalid type, expecting a list of strings (got `0`)'),

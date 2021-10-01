@@ -4,17 +4,17 @@ import contextlib
 import dataclasses
 import email
 import functools
-import glob
 import importlib.util
 import itertools
 import os
 import os.path
+import pathlib
 import shutil
 import subprocess
 import sys
 import warnings
 
-from typing import ContextManager, Iterable, Iterator, List, Optional, Sequence, Set, Union
+from typing import ContextManager, Iterable, Iterator, List, Mapping, NamedTuple, Optional, Sequence, Set, Union
 
 import packaging.markers
 import packaging.requirements
@@ -34,6 +34,11 @@ else:
 
 
 Path = Union[str, os.PathLike]
+
+
+class PythonSource(NamedTuple):
+    origin: pathlib.Path
+    source: Set[pathlib.Path]
 
 
 class TrampolimError(Exception):
@@ -66,9 +71,9 @@ def load_file_module(name: str, path: str) -> object:
 
 
 @contextlib.contextmanager
-def cd(path: str) -> Iterator[None]:
+def cd(path: Path) -> Iterator[None]:
     cwd = os.getcwd()
-    os.chdir(path)
+    os.chdir(os.fspath(path))
 
     try:
         yield
@@ -76,21 +81,20 @@ def cd(path: str) -> Iterator[None]:
         os.chdir(cwd)
 
 
-def ensure_empty_dir(path: str) -> None:
+def ensure_empty_dir(path: pathlib.Path) -> None:
     shutil.rmtree(path, ignore_errors=True)
-    os.makedirs(path)
+    path.mkdir(exist_ok=True, parents=True)
 
 
-def copy_to_dir(files: Iterable[str], out: str) -> None:
+def copy_to_dir(files: Iterable[pathlib.Path], out: pathlib.Path) -> None:
     for file in files:
-        dirpath = os.path.dirname(file)
-        if dirpath:
-            destdirpath = os.path.join(out, dirpath)
-            os.makedirs(destdirpath, exist_ok=True)
-            shutil.copystat(dirpath, destdirpath)
+        if os.path.dirname(file):
+            destdirpath = out / file.parent
+            destdirpath.mkdir(exist_ok=True, parents=True)
+            shutil.copystat(file.parent, destdirpath)
         shutil.copy2(
             file,
-            os.path.join(out, file),
+            out / file,
             follow_symlinks=False,
         )
 
@@ -110,6 +114,15 @@ class Project():
         self._meta = pep621.StandardMetadata.from_pyproject(self._pyproject)
         self._trampolim_meta = trampolim._metadata.TrampolimMetadata.from_pyproject(self._pyproject)
 
+        if self._trampolim_meta.module_location:
+            try:
+                pathlib.Path(self._trampolim_meta.module_location).relative_to(os.curdir)
+            except ValueError:
+                raise ConfigurationError(
+                    'Location in `tool.trampolim.module-location` is not relative '
+                    f'to the project source: {self._trampolim_meta.module_location}'
+                ) from None
+
         for field in self._meta.dynamic:
             if field not in self._VALID_DYNAMIC:
                 raise ConfigurationError(f'Unsupported field `{field}` in `project.dynamic`')
@@ -117,7 +130,7 @@ class Project():
         self.version  # calculate version
 
         self._path = os.getcwd()
-        self._extra_binary_source: Set[str] = set()
+        self._extra_binary_source: Set[pathlib.Path] = set()
 
         # warn users about test/tests modules -- they probably don't want them installed!
         for module in ('test', 'tests'):
@@ -127,18 +140,19 @@ class Project():
                     TrampolimWarning,
                 )
 
+        working_dir = pathlib.Path('.trampolim').absolute()
         # copy distribution source to working directory
-        self._dist_srcpath: str = os.path.abspath(os.path.join('.trampolim', 'dist-source'))
+        self._dist_srcpath: pathlib.Path = working_dir / 'dist-source'
         ensure_empty_dir(self._dist_srcpath)
         copy_to_dir(
             itertools.chain(self.distribution_source, self.build_system_source),
             self._dist_srcpath,
         )
         # copy binary source to working directory
-        self._bin_srcpath: str = os.path.abspath(os.path.join('.trampolim', 'bin-source'))
+        self._bin_srcpath: pathlib.Path = working_dir / 'bin-source'
         ensure_empty_dir(self._bin_srcpath)
         copy_to_dir(
-            itertools.chain(self.binary_source, self.build_system_source),
+            itertools.chain(self.binary_source.values(), self.build_system_source),
             self._bin_srcpath,
         )
 
@@ -167,7 +181,10 @@ class Project():
                 print(f'> Running `{task.name}`')
                 session = trampolim._tasks.Session(self)
                 task.run(session)
-                self._extra_binary_source |= set(session.extra_source)
+                self._extra_binary_source |= {
+                    pathlib.Path(*path.split('/'))
+                    for path in session.extra_source
+                }
                 # TODO: print summary
 
         # set the extra source atime and mtime
@@ -194,8 +211,8 @@ class Project():
         return self.name.replace('-', '_')
 
     @property
-    def build_system_source(self) -> Iterable[str]:
-        return iter(filter(None, [
+    def build_system_source(self) -> Iterable[pathlib.Path]:
+        return map(pathlib.Path, filter(None, [
             'pyproject.toml',
             '.trampolim.py' if os.path.isfile('.trampolim.py') else None,
             self._meta.license.file if self._meta.license else None,
@@ -203,14 +220,32 @@ class Project():
         ]))
 
     @property
-    def distribution_source(self) -> Iterable[str]:
-        '''Project source -- for source distributions.'''
-        return self.modules_source | self.config_source_include
+    def distribution_source(self) -> Iterable[pathlib.Path]:
+        '''Project source, excluding modules -- for source distributions.'''
+        return (
+            set(self.build_system_source)
+            | self.config_source_include
+            | self.python_source.source
+        )
 
     @property
-    def binary_source(self) -> Iterable[str]:
-        '''Python package source -- for binary distributions.'''
-        return self.modules_source | self._extra_binary_source
+    def binary_source(self) -> Mapping[pathlib.Path, pathlib.Path]:
+        '''Python package source, excluding modules -- for binary distributions.'''
+        source = {
+            path: path
+            for path in self._extra_binary_source
+        }
+        source.update({
+            path.relative_to(self.python_source.origin): path
+            for path in self.python_source.source
+        })
+        return source
+
+    @property
+    def modules_location(self) -> pathlib.Path:
+        return pathlib.Path(
+            self._trampolim_meta.module_location or os.path.curdir
+        ).relative_to(os.path.curdir)
 
     @property
     def root_modules(self) -> Sequence[str]:
@@ -223,7 +258,7 @@ class Project():
             return self._trampolim_meta.top_level_modules
 
         name = self.name.replace('-', '_')
-        files = os.listdir()
+        files = os.listdir(self._trampolim_meta.module_location or os.path.curdir)
         if f'{name}.py' in files:  # file module
             return [f'{name}.py']
         if name in files:  # dir module
@@ -231,25 +266,27 @@ class Project():
         raise TrampolimError(f'Could not find the top-level module(s) (looking for `{name}`)')
 
     @property
-    def modules_source(self) -> Set[str]:
+    def python_source(self) -> PythonSource:
         '''Full source for the modules in root_modules.'''
         source = set()
         # TODO: ignore files not escaped as specified in PEP 427
         for module in self.root_modules:
             if module.endswith('.py'):  # file
-                source.add(module)
+                source.add(self.modules_location / module)
             else:  # dir
                 source |= {
-                    path for path in glob.glob(os.path.join(module, '**'), recursive=True)
-                    if os.path.isfile(path) and not path.endswith('.pyc')
+                    path
+                    for directory in self.modules_location.joinpath(module).rglob('**')
+                    for path in directory.iterdir()
+                    if path.is_file() and path.suffix != '.pyc'
                 }
-        return source
+        return PythonSource(self.modules_location, source)
 
     @property
-    def config_source_include(self) -> Set[str]:
+    def config_source_include(self) -> Set[pathlib.Path]:
         '''Extra source include paths specified in the config.'''
         return {
-            os.path.sep.join(path.split('/'))
+            pathlib.Path(*path.split('/'))
             for path in self._trampolim_meta.source_include
         }
 
