@@ -83,3 +83,15 @@ def test_src_layout(package_src_layout, wheel_src_layout):
             'src_layout/c.py',
             'src_layout/d/__init__.py',
         }
+
+
+def test_overwrite_version(monkeypatch, package_no_version, tmp_dir):
+    monkeypatch.setenv('TRAMPOLIM_VCS_VERSION', '1.0.0+custom')
+
+    with wheel.wheelfile.WheelFile(tmp_dir / trampolim.build_wheel(tmp_dir), 'r') as w:
+        metadata = w.read('no_version-1.0.0+custom.dist-info/METADATA').decode()
+    assert metadata == textwrap.dedent('''
+        Metadata-Version: 2.1
+        Name: no-version
+        Version: 1.0.0+custom
+    ''').lstrip()

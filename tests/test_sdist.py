@@ -2,6 +2,7 @@
 
 import pathlib
 import tarfile
+import textwrap
 
 import trampolim._build
 
@@ -116,3 +117,15 @@ def tests_src_layout(package_src_layout, sdist_src_layout):
             'src-layout-0.0.0/src/src_layout/a.py',
         ],
     )
+
+
+def test_overwrite_version(monkeypatch, package_no_version, tmp_dir):
+    monkeypatch.setenv('TRAMPOLIM_VCS_VERSION', '1.0.0+custom')
+
+    t = tarfile.open(tmp_dir / trampolim.build_sdist(tmp_dir), 'r')
+    pkginfo = t.extractfile('no-version-1.0.0+custom/PKG-INFO').read().decode()
+    assert pkginfo == textwrap.dedent('''
+        Metadata-Version: 2.1
+        Name: no-version
+        Version: 1.0.0+custom
+    ''').lstrip()

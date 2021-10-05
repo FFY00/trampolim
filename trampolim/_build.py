@@ -303,6 +303,7 @@ class Project():
         '''Project version.'''
 
         if self._meta.version:
+            # static metadata
             assert isinstance(self._meta.version, packaging.version.Version)
             return self._meta.version
 
@@ -313,12 +314,12 @@ class Project():
             )
 
         if 'TRAMPOLIM_VCS_VERSION' in os.environ:
-            return packaging.version.Version(os.environ['TRAMPOLIM_VCS_VERSION'])
-
-        # from git archive
-        # http://git-scm.com/book/en/v2/Customizing-Git-Git-Attributes
-        # https://git-scm.com/docs/pretty-formats
-        if os.path.isfile('.git-archive.txt'):
+            # manual overwrite
+            self._meta.version = packaging.version.Version(os.environ['TRAMPOLIM_VCS_VERSION'])
+        elif os.path.isfile('.git-archive.txt'):
+            # from git archive
+            # http://git-scm.com/book/en/v2/Customizing-Git-Git-Attributes
+            # https://git-scm.com/docs/pretty-formats
             with open('.git-archive.txt') as f:
                 data = email.message_from_file(f)
             if 'ref-names' in data:
@@ -332,16 +333,25 @@ class Project():
                         return packaging.version.Version(value.strip(' v'))
             if 'commit' in data and '$' not in data['commit']:
                 assert isinstance(data['commit'], str)
-                return packaging.version.Version(f'0.dev0+{data["commit"]}')
+                self._meta.version = packaging.version.Version(f'0.dev0+{data["commit"]}')
+        else:
+            # from git repo
+            try:
+                tag, r, commit = subprocess.check_output([
+                    'git', 'describe', '--tags', '--long'
+                ]).decode().strip(' v').split('-')
+                self._meta.version = packaging.version.Version(
+                    f'{tag}' if r == '0' else f'{tag}.{r}+{commit}'
+                )
+            except (FileNotFoundError, subprocess.CalledProcessError, TypeError):
+                pass
 
-        # from git repo
-        try:
-            tag, r, commit = subprocess.check_output([
-                'git', 'describe', '--tags', '--long'
-            ]).decode().strip(' v').split('-')
-            return packaging.version.Version(f'{tag}' if r == '0' else f'{tag}.{r}+{commit}')
-        except (FileNotFoundError, subprocess.CalledProcessError, TypeError):
-            pass
+        if self._meta.version:
+            if 'version' in self._meta.dynamic:
+                # XXX: This should probably be done automatically by the pep621 module.
+                self._meta.dynamic.remove('version')  # we set the version, so it is no longer dynamic
+            assert isinstance(self._meta.version, packaging.version.Version)
+            return self._meta.version
 
         raise TrampolimError(
             'Could not find the project version from VCS (you can set the '
