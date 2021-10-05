@@ -25,16 +25,14 @@ def cd_package(package):
         os.chdir(cur_dir)
 
 
-'''
 @pytest.fixture
 def tmp_dir():
-    path = tempfile.mkdtemp(prefix='python-build-test-')
+    path = tempfile.mkdtemp(prefix='trampolim-test-')
 
     try:
         yield pathlib.Path(path)
     finally:
         shutil.rmtree(path)
-'''
 
 
 @pytest.fixture(scope='session')
