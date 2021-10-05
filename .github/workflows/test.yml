@@ -28,9 +28,10 @@ jobs:
           - macos
           - windows
         py:
-          - 3.9
-          - 3.8
-          - 3.7
+          - "3.10"
+          - "3.9"
+          - "3.8"
+          - "3.7"
 #          - pypy3
 
     steps:
@@ -39,7 +40,7 @@ jobs:
       - uses: excitedleigh/setup-nox@v2.0.0
 
       - name: Run tests
-        run: nox -s test-${{ matrix.py }}
+        run: nox --force-color -s test-${{ matrix.py }}
 
       - uses: codecov/codecov-action@v1
         if: ${{ always() }}
