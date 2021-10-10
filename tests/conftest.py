@@ -69,7 +69,7 @@ def generate_package_fixture(package):
     return fixture
 
 
-def generate_sdist_fixture(package, package_fixture):
+def generate_sdist_fixture(package):
     @pytest.fixture(scope='session')
     def fixture(tmp_dir_session):
         with cd_package(package):
@@ -77,7 +77,7 @@ def generate_sdist_fixture(package, package_fixture):
     return fixture
 
 
-def generate_wheel_fixture(package, package_fixture):
+def generate_wheel_fixture(package):
     @pytest.fixture(scope='session')
     def fixture(tmp_dir_session):
         with cd_package(package):
@@ -88,7 +88,6 @@ def generate_wheel_fixture(package, package_fixture):
 # inject {package,sdist,wheel}_* fixtures (https://github.com/pytest-dev/pytest/issues/2424)
 for package in os.listdir(package_dir):
     normalized = package.replace('-', '_')
-    fixture = f'package_{normalized}'
-    globals()[fixture] = generate_package_fixture(package)
-    globals()[f'sdist_{normalized}'] = generate_sdist_fixture(package, fixture)
-    globals()[f'wheel_{normalized}'] = generate_wheel_fixture(package, fixture)
+    globals()[f'package_{normalized}'] = generate_package_fixture(package)
+    globals()[f'sdist_{normalized}'] = generate_sdist_fixture(package)
+    globals()[f'wheel_{normalized}'] = generate_wheel_fixture(package)
