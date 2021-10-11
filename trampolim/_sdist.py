@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: MIT
 
+import contextlib
 import gzip
 import io
 import os.path
@@ -50,43 +51,40 @@ class SdistBuilder():
             format=tarfile.PAX_FORMAT,  # changed in 3.8 to GNU
         )
 
-        with self._project.cd_dist_source():
-            # add source
-            for path in self._project.distribution_source:
-                arcname = pathlib.Path(self.name) / path
-                tar.add(os.fspath(path), arcname.as_posix())
+        with contextlib.closing(file), tar:
+            with self._project.cd_dist_source():
+                # add source
+                for path in self._project.distribution_source:
+                    arcname = pathlib.Path(self.name) / path
+                    tar.add(os.fspath(path), arcname.as_posix())
 
-            # add version file
-            info = tarfile.TarInfo(f'{self.name}/.trampolim/version')
-            version_raw = str(self._project.version).encode()
-            info.size = len(version_raw)
-            with io.BytesIO(version_raw) as data:
+                # add version file
+                info = tarfile.TarInfo(f'{self.name}/.trampolim/version')
+                version_raw = str(self._project.version).encode()
+                info.size = len(version_raw)
+                with io.BytesIO(version_raw) as data:
+                    tar.addfile(info, data)
+
+                # add license
+                license_ = self._project._meta.license
+                if license_:
+                    if license_.file:
+                        tar.add(license_.file, f'{self.name}/{license_.file}')
+                    elif license_.text:
+                        license_raw = license_.text.encode()
+                        info = tarfile.TarInfo(f'{self.name}/LICENSE')
+                        info.size = len(license_raw)
+                        with io.BytesIO(license_raw) as data:
+                            tar.addfile(info, data)
+
+                # add readme
+                readme = self._project._meta.readme
+                if readme:
+                    tar.add(readme.file, f'{self.name}/{readme.file}')
+
+            # PKG-INFO
+            pkginfo = bytes(self._project._meta.as_rfc822())
+            info = tarfile.TarInfo(f'{self.name}/PKG-INFO')
+            info.size = len(pkginfo)
+            with io.BytesIO(pkginfo) as data:
                 tar.addfile(info, data)
-
-            # add license
-            license_ = self._project._meta.license
-            if license_:
-                if license_.file:
-                    tar.add(license_.file, f'{self.name}/{license_.file}')
-                elif license_.text:
-                    license_raw = license_.text.encode()
-                    info = tarfile.TarInfo(f'{self.name}/LICENSE')
-                    info.size = len(license_raw)
-                    with io.BytesIO(license_raw) as data:
-                        tar.addfile(info, data)
-
-            # add readme
-            readme = self._project._meta.readme
-            if readme:
-                tar.add(readme.file, f'{self.name}/{readme.file}')
-
-        # PKG-INFO
-        pkginfo = bytes(self._project._meta.as_rfc822())
-        info = tarfile.TarInfo(f'{self.name}/PKG-INFO')
-        info.size = len(pkginfo)
-        with io.BytesIO(pkginfo) as data:
-            tar.addfile(info, data)
-
-        # cleanup
-        tar.close()
-        file.close()
