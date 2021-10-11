@@ -307,6 +307,15 @@ class Project():
             assert isinstance(self._meta.version, packaging.version.Version)
             return self._meta.version
 
+        version_file = pathlib.Path('.trampolim', 'version')
+        if version_file.is_file():
+            if 'version' in self._meta.dynamic:
+                # XXX: This should probably be done automatically by the pep621 module.
+                self._meta.dynamic.remove('version')
+            self._meta.version = packaging.version.Version(version_file.read_text())
+            assert isinstance(self._meta.version, packaging.version.Version)
+            return self._meta.version
+
         if 'version' not in self._meta.dynamic:
             raise ConfigurationError(
                 'Missing required field `project.version` (if you want to infer the project version '

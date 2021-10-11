@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 
 import os.path
+import tarfile
 import textwrap
 
 import wheel.wheelfile
@@ -90,6 +91,27 @@ def test_overwrite_version(monkeypatch, package_no_version, tmp_dir):
 
     with wheel.wheelfile.WheelFile(tmp_dir / trampolim.build_wheel(tmp_dir), 'r') as w:
         metadata = w.read('no_version-1.0.0+custom.dist-info/METADATA').decode()
+    assert metadata == textwrap.dedent('''
+        Metadata-Version: 2.1
+        Name: no-version
+        Version: 1.0.0+custom
+    ''').lstrip()
+
+
+def test_build_via_sdist(monkeypatch, package_no_version, tmp_dir):
+    monkeypatch.setenv('TRAMPOLIM_VCS_VERSION', '1.0.0+custom')
+
+    sdist_file = tmp_dir / trampolim.build_sdist(tmp_dir)
+    with tarfile.open(sdist_file) as t:
+        t.extractall(tmp_dir)
+
+    monkeypatch.delenv('TRAMPOLIM_VCS_VERSION')
+
+    os.chdir(tmp_dir / sdist_file.name[:-len('.tar.gz')])
+    wheel_file = tmp_dir / trampolim.build_wheel(tmp_dir)
+    with wheel.wheelfile.WheelFile(wheel_file) as w:
+        metadata = w.read('no_version-1.0.0+custom.dist-info/METADATA').decode()
+
     assert metadata == textwrap.dedent('''
         Metadata-Version: 2.1
         Name: no-version
