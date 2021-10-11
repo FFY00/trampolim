@@ -9,7 +9,6 @@ on:
       - '*.rst'
   pull_request:
     branches:
-      - main
     paths-ignore:
       - 'docs/**'
       - '*.md'
