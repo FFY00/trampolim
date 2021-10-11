@@ -56,6 +56,13 @@ class SdistBuilder():
                 arcname = pathlib.Path(self.name) / path
                 tar.add(os.fspath(path), arcname.as_posix())
 
+            # add version file
+            info = tarfile.TarInfo(f'{self.name}/.trampolim/version')
+            version_raw = str(self._project.version).encode()
+            info.size = len(version_raw)
+            with io.BytesIO(version_raw) as data:
+                tar.addfile(info, data)
+
             # add license
             license_ = self._project._meta.license
             if license_:
