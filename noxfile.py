@@ -5,7 +5,7 @@ import os
 import nox
 
 
-nox.options.sessions = ['lint', 'type', 'tests']
+nox.options.sessions = ['lint', 'type', 'test']
 
 
 @nox.session(reuse_venv=True)
