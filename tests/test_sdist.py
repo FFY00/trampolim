@@ -119,10 +119,10 @@ def tests_src_layout(package_src_layout, sdist_src_layout):
     )
 
 
-def test_overwrite_version(monkeypatch, package_no_version, tmp_dir):
+def test_overwrite_version(monkeypatch, package_no_version, tmp_path):
     monkeypatch.setenv('TRAMPOLIM_VCS_VERSION', '1.0.0+custom')
 
-    t = tarfile.open(tmp_dir / trampolim.build_sdist(tmp_dir), 'r')
+    t = tarfile.open(tmp_path / trampolim.build_sdist(tmp_path), 'r')
     pkginfo = t.extractfile('no-version-1.0.0+custom/PKG-INFO').read().decode()
     assert pkginfo == textwrap.dedent('''
         Metadata-Version: 2.1

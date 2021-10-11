@@ -3,8 +3,6 @@
 import contextlib
 import os
 import pathlib
-import shutil
-import tempfile
 
 import pytest
 
@@ -23,29 +21,6 @@ def cd_package(package):
         yield package_path
     finally:
         os.chdir(cur_dir)
-
-
-@pytest.fixture
-def tmp_dir():
-    path = tempfile.mkdtemp(prefix='trampolim-test-')
-
-    try:
-        yield pathlib.Path(path)
-    finally:
-        shutil.rmtree(path)
-
-
-@pytest.fixture(scope='session')
-def tmp_dir_session():
-    path = tempfile.mkdtemp(prefix='trampolim-test-')
-
-    try:
-        yield pathlib.Path(path)
-    finally:
-        try:
-            shutil.rmtree(path)
-        except PermissionError:  # pragma: no cover
-            pass  # this sometimes fails on windows :/
 
 
 @pytest.fixture
@@ -71,17 +46,19 @@ def generate_package_fixture(package):
 
 def generate_sdist_fixture(package):
     @pytest.fixture(scope='session')
-    def fixture(tmp_dir_session):
+    def fixture(tmp_path_factory):
+        tmp_path_sdist = tmp_path_factory.mktemp('sdist_package')
         with cd_package(package):
-            return tmp_dir_session / trampolim.build_sdist(tmp_dir_session)
+            return tmp_path_sdist / trampolim.build_sdist(tmp_path_sdist)
     return fixture
 
 
 def generate_wheel_fixture(package):
     @pytest.fixture(scope='session')
-    def fixture(tmp_dir_session):
+    def fixture(tmp_path_factory):
+        tmp_path_wheel = tmp_path_factory.mktemp('wheel_package')
         with cd_package(package):
-            return tmp_dir_session / trampolim.build_wheel(tmp_dir_session)
+            return tmp_path_wheel / trampolim.build_wheel(tmp_path_wheel)
     return fixture
 
 
