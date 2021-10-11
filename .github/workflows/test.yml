@@ -37,6 +37,11 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      - uses: actions/setup-python@v2
+        with:
+          python-version: "3.10"
+
+      # Currently doesn't activate 3.10 too
       - uses: excitedleigh/setup-nox@v2.0.0
 
       - name: Run tests
