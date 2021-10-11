@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: MIT
 
+import contextlib
 import gzip
 import io
 import os.path
@@ -34,23 +35,29 @@ class SdistBuilder():
         source_date_epoch = os.environ.get('SOURCE_DATE_EPOCH')
         mtime = int(source_date_epoch) if source_date_epoch else None
 
-        # open files
-        file = typing.cast(
-            IO[bytes],
-            gzip.GzipFile(
-                os.path.join(path, self.file),
-                mode='wb',
-                mtime=mtime,
-            ),
-        )
-        tar = tarfile.TarFile(
-            str(path),
-            mode='w',
-            fileobj=file,
-            format=tarfile.PAX_FORMAT,  # changed in 3.8 to GNU
-        )
+        with contextlib.ExitStack() as stack:
+            # open files
+            file = stack.enter_context(
+                typing.cast(
+                    IO[bytes],
+                    gzip.GzipFile(
+                        os.path.join(path, self.file),
+                        mode='wb',
+                        mtime=mtime,
+                    ),
+                )
+            )
 
-        with self._project.cd_dist_source():
+            tar = stack.enter_context(
+                tarfile.TarFile(
+                    str(path),
+                    mode='w',
+                    fileobj=file,
+                    format=tarfile.PAX_FORMAT,  # changed in 3.8 to GNU
+                )
+            )
+
+            stack.enter_context(self._project.cd_dist_source())
             # add source
             for path in self._project.distribution_source:
                 arcname = pathlib.Path(self.name) / path
@@ -86,7 +93,3 @@ class SdistBuilder():
         info.size = len(pkginfo)
         with io.BytesIO(pkginfo) as data:
             tar.addfile(info, data)
-
-        # cleanup
-        tar.close()
-        file.close()
