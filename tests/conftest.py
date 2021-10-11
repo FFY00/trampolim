@@ -32,7 +32,10 @@ def tmp_dir():
     try:
         yield pathlib.Path(path)
     finally:
-        shutil.rmtree(path)
+        try:
+            shutil.rmtree(path)
+        except PermissionError:  # pragma: no cover
+            pass  # this sometimes fails on windows :/
 
 
 @pytest.fixture(scope='session')
