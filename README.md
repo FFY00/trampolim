@@ -22,7 +22,7 @@ Your `pyproject.toml` should look something like this:
 ```toml
 [build-system]
 build-backend = 'trampolim'
-requires = ['trampolim~=0.0.4']
+requires = ['trampolim~=0.1.0']
 
 [project]
 name = 'sample_project'

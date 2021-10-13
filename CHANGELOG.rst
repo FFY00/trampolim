@@ -3,6 +3,18 @@ Changelog
 +++++++++
 
 
+0.1.0 (13-10-2021)
+==================
+
+- Fix dynamic version when building from sdist (`PR #20`_, Fixes ` #4`_)
+- Add ``module-location`` option, allowing ``src``-layout (`PR #15`_, Fixes ` #3`_)
+
+.. _PR #15: https://github.com/FFY00/trampolim/pull/15
+.. _PR #15: https://github.com/FFY00/trampolim/pull/20
+.. _#3: https://github.com/FFY00/trampolim/issues/3
+.. _#3: https://github.com/FFY00/trampolim/issues/4
+
+
 0.0.4 (30-09-2021)
 ==================
 
