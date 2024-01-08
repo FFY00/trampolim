@@ -4,7 +4,7 @@ ci:
 
 repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v4.0.1
+  rev: v4.5.0
   hooks:
   - id: check-ast
   - id: check-builtin-literals
@@ -18,11 +18,11 @@ repos:
   - id: trailing-whitespace
   - id: double-quote-string-fixer
 - repo: https://github.com/PyCQA/isort
-  rev: 5.10.1
+  rev: 5.13.2
   hooks:
     - id: isort
 - repo: https://github.com/PyCQA/flake8
-  rev: "4.0.1"
+  rev: "7.0.0"
   hooks:
   - id: flake8
     language_version: python3.9
